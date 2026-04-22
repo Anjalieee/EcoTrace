@@ -2,13 +2,14 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
+Thumbs.db
 # C extensions
 *.so
 
 # Distribution / packaging
 .Python
 build/
+.vite/
 develop-eggs/
 dist/
 downloads/
@@ -63,3 +64,11 @@ logs/
 .coverage
 .pytest_cache/
 .tmp/
+
+.db
+.sqlite3
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd

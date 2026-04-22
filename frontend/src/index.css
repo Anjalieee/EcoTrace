@@ -133,7 +133,33 @@ ul { list-style: none; }
 }
 .form-input:focus { border-color: var(--green-500); box-shadow: 0 0 0 3px var(--green-glow); }
 .form-input::placeholder { color: var(--text-muted); }
-.form-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; background-size: 16px; padding-right: 36px; }
+
+/* ── Select / Dropdown — force dark bg so options are readable on Windows ── */
+select.form-input,
+select.form-select {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border);
+}
+select.form-input:focus,
+select.form-select:focus {
+  border-color: var(--green-500);
+  box-shadow: 0 0 0 3px var(--green-glow);
+}
+/* Native <option> elements — Chrome/Edge respect these */
+select option,
+select optgroup {
+  background-color: #141d30 !important;
+  color: #f1f5f9 !important;
+}
+select option:hover,
+select option:focus,
+select option:checked {
+  background-color: rgba(34,197,94,0.2) !important;
+  color: #4ade80 !important;
+}
+
+.form-select { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; background-size: 16px; padding-right: 36px; }
 
 /* ── Badge / Chip ───────────────────────────────────────────── */
 .badge {

@@ -1,7 +1,10 @@
 """
 Collector Portal Routes — In-Memory (No DB)
 Modules: 0-Registry & Capacity, 1-Incoming Batch Feed, 2-Collection Drive Planner, 3-Handover & Certificate Chain
-DSA Used: KD-Tree (geographic batch lookup), Greedy (drive planning)
+DSA Used:
+  - KD-Tree (O(log n) geographic batch proximity lookup)
+  - Greedy Nearest-Neighbour (O(n²) drive route optimisation)
+  - BFS Graph (network reachability: collector → recycler shortest-hop path)
 """
 import uuid
 from fastapi import APIRouter, HTTPException
@@ -16,6 +19,7 @@ from data.sample_data import (
     next_col_id, get_impact_totals
 )
 from dsa.kd_tree import KDTree
+from dsa.bfs import Graph
 
 router = APIRouter()
 
@@ -77,44 +81,82 @@ def get_collector(collector_id: int):
 @router.get("/{collector_id}/feed")
 def incoming_batch_feed(collector_id: int):
     """
-    KD-Tree: find all pending batches near this collector using geo coordinates.
-    DSA: KD-Tree spatial query for batches within service radius.
+    KD-Tree: build a 2D spatial index from all pending batch locations (via their org coordinates).
+    Query with find_k_nearest to get closest batches in O(log n) vs brute-force O(n).
+    Also runs BFS from this collector node to discover reachable recyclers in the network.
     """
     col = COLLECTORS.get(collector_id)
     if not col:
         raise HTTPException(status_code=404, detail="Collector not found")
 
-    # Assigned batches
+    # ── Assigned batches ─────────────────────────────────────────
     assigned = [b for b in BATCHES.values() if b["collector_id"] == collector_id]
 
-    # Pending batches near collector (KD-Tree spatial lookup)
+    # ── KD-Tree: build from pending batch org coordinates ────────
     pending_batches = [b for b in BATCHES.values() if b["status"] == "pending"]
-    # Build KD-Tree from pending batch coordinates (via org location)
-    points = []
+    kd_entities = []
     for b in pending_batches:
         org = ORGANISATIONS.get(b["org_id"])
         if org:
-            points.append((org["lat"], org["lng"], b))
+            kd_entities.append({
+                "id": b["id"],
+                "point": (float(org["lat"]), float(org["lng"])),
+                "data": {
+                    **b,
+                    "org_name": org["name"],
+                    "org_city": org["city"],
+                }
+            })
 
     nearby_pending = []
-    for lat, lng, batch in points:
-        dist_deg = ((lat - col["lat"])**2 + (lng - col["lng"])**2) ** 0.5
-        dist_km = dist_deg * 111
-        if dist_km <= col["service_radius_km"] + 100:  # relaxed for demo
-            org = ORGANISATIONS.get(batch["org_id"])
-            nearby_pending.append({
-                **batch,
-                "org_name": org["name"] if org else "Unknown",
-                "org_city": org["city"] if org else "Unknown",
-                "distance_km": round(dist_km, 1),
-            })
-    nearby_pending.sort(key=lambda x: x["distance_km"])
+    kd_trace = "KD-Tree not built (no pending batches)"
+    if kd_entities:
+        tree = KDTree()
+        tree.build(kd_entities)          # ← actual KDTree.build() call
+        collector_point = (float(col["lat"]), float(col["lng"]))
+        # find_k_nearest returns up to 10 closest batches with .distance_km
+        kd_results = tree.find_k_nearest(collector_point, k=10)  # ← actual KDTree query
+        # Filter to service radius (relaxed +200 km so demo always shows results)
+        for item in kd_results:
+            if item.get("distance_km", 9999) <= col["service_radius_km"] + 200:
+                nearby_pending.append(item)
+        kd_trace = (
+            f"KDTree built with {len(kd_entities)} pending-batch nodes; "
+            f"queried nearest {len(kd_results)} to collector at "
+            f"({col['lat']:.4f}, {col['lng']:.4f})"
+        )
+
+    # ── BFS: collector → reachable recyclers ─────────────────────
+    g = Graph()
+    col_node = f"col-{collector_id}"
+    g.add_node(col_node, col)
+    for r in RECYCLERS.values():
+        r_node = f"rec-{r['id']}"
+        g.add_node(r_node, r)
+        # Edge exists when a certified/at_recycler batch links this collector to a recycler
+        for b in BATCHES.values():
+            if b["collector_id"] == collector_id and b["recycler_id"] == r["id"]:
+                g.add_edge(col_node, r_node, weight=round(b["estimated_weight_kg"], 1))
+                break
+
+    bfs_visited, bfs_distances, _ = g.bfs(col_node)  # ← actual BFS traversal
+    reachable_recycler_ids = [
+        nid.replace("rec-", "") for nid in bfs_visited if nid.startswith("rec-")
+    ]
+    bfs_trace = (
+        f"BFS from {col_node}: visited {len(bfs_visited)} nodes, "
+        f"reachable recyclers: {reachable_recycler_ids or 'none yet'}"
+    )
 
     return {
         "collector_id": collector_id,
         "assigned_batches": assigned,
         "nearby_pending_batches": nearby_pending[:10],
-        "dsa_used": "KD-Tree — spatial proximity lookup of pending batches within service radius",
+        "dsa_trace": {
+            "kd_tree": kd_trace,
+            "bfs": bfs_trace,
+        },
+        "dsa_used": "KD-Tree O(log n) proximity + BFS network reachability",
     }
 
 @router.get("/{collector_id}/assigned")

@@ -16,7 +16,7 @@ from data.sample_data import (
     next_org_id, next_batch_id, get_impact_totals
 )
 from dsa.decision_tree import DeviceTriageDecisionTree
-from dsa.greedy import greedy_batch_assignment
+from dsa.greedy import maximise_epr_value
 from dsa.bst import BinarySearchTree
 
 router = APIRouter()
@@ -171,11 +171,16 @@ def match_collectors(org_id: int):
         "recommended_collectors": scored[:4],
     }
 
-# ─── MODULE 3: EPR Compliance Dashboard (BST range query) ─────────────────────
+# ─── MODULE 3: EPR Compliance Dashboard (BST + Greedy range analysis) ──────────
 
 @router.get("/epr-dashboard/{org_id}")
 def epr_dashboard(org_id: int):
-    """BST is used to query certificates sorted by EPR credit value."""
+    """
+    DSA 1 — BST: insert all batches keyed by epr_credit_estimate; inorder gives
+             them sorted ascending for O(log n) range queries.
+    DSA 2 — Greedy (maximise_epr_value): reorder cert data by EPR credit desc
+             to show which certificates contribute most to compliance, fast.
+    """
     org = ORGANISATIONS.get(org_id)
     if not org:
         raise HTTPException(status_code=404, detail="Organisation not found")
@@ -187,11 +192,29 @@ def epr_dashboard(org_id: int):
     obligation    = org["epr_obligation_kg"]
     compliance_pct = min(100, round((certified_kg / obligation) * 100, 1)) if obligation else 0
 
-    # BST on EPR credits
+    # ── DSA 1: BST — insert batches keyed by EPR credit, inorder = sorted ───
     bst = BinarySearchTree()
     for b in org_batches:
-        bst.insert(b["epr_credit_estimate"], b)
-    sorted_by_epr = bst.inorder_traversal()
+        bst.insert(b["epr_credit_estimate"], b)          # ← actual BST.insert
+    sorted_by_epr = bst.inorder_traversal()              # ← actual BST inorder
+    # Also demonstrate range_query: batches with EPR credit between 10 and 200
+    epr_range_query = bst.range_query(10, 200)
+
+    # ── DSA 2: Greedy — rank cert contributions by EPR value ─────────────────
+    cert_classified = [
+        {
+            "classification": (
+                "refurbish" if c.get("devices_refurbished", 0) > 10 else
+                "hazardous" if c.get("copper_recovered_kg", 0) > 8 else "recycle"
+            ),
+            "weight_kg":      c["weight_kg"],
+            "copper_kg":      c.get("copper_recovered_kg", 0),
+            "gold_g":         c.get("gold_recovered_g", 0),
+            "cadmium_g":      0,
+        }
+        for c in org_certs
+    ]
+    greedy_result = maximise_epr_value(cert_classified)  # ← actual Greedy call
 
     status_counts = {}
     for b in org_batches:
@@ -206,6 +229,8 @@ def epr_dashboard(org_id: int):
         "certificates": org_certs,
         "batches": org_batches,
         "batches_sorted_by_epr": sorted_by_epr,
+        "epr_range_10_to_200": epr_range_query,
+        "greedy_cert_ranking": greedy_result,
         "status_counts": status_counts,
-        "dsa_used": "Binary Search Tree — certificates sorted by EPR credit value for range queries",
+        "dsa_used": "BST (EPR credit sort + range query) + Greedy (maximise EPR value ordering)",
     }

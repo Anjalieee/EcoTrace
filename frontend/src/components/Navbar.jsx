@@ -2,10 +2,10 @@ import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
 const links = [
-  { to: '/',               label: 'Home'          },
-  { to: '/bulk-consumer',  label: '🏢 Bulk Consumer' },
-  { to: '/collector',      label: '🚛 Collector'  },
-  { to: '/recycler',       label: '♻️ Recycler'   },
+  { to: '/',              label: '← Switch Role'     },
+  { to: '/bulk-consumer', label: '🏢 Bulk Consumer'  },
+  { to: '/collector',     label: '🚛 Collector'       },
+  { to: '/recycler',      label: '♻️ Recycler'        },
 ]
 
 export default function Navbar() {
@@ -17,7 +17,7 @@ export default function Navbar() {
         <div className="navbar-logo-icon">ET</div>
         <div>
           <div className="navbar-title">EcoTrace</div>
-          <div className="navbar-subtitle">E-Waste Management & EPR Tracking</div>
+          <div className="navbar-subtitle">E-Waste Management &amp; EPR Tracking</div>
         </div>
       </Link>
 
@@ -37,7 +37,7 @@ export default function Navbar() {
           className="btn btn-secondary btn-sm"
           style={{ marginLeft: 8 }}
         >
-          API Docs
+          API Docs ↗
         </a>
       </div>
     </nav>

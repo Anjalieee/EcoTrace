@@ -220,15 +220,48 @@ function Module1() {
 }
 
 // ─── MODULE 2: Collector Matching ─────────────────────────────────────────────
+function AssignButton({ collectorId, orgId, collectorName }) {
+  const [status, setStatus] = useState('idle')
+  const [msg, setMsg]       = useState('')
+
+  const handleAssign = async () => {
+    setStatus('loading')
+    try {
+      const batchesRes = await api.getOrgBatches(orgId)
+      const pending = (batchesRes.batches || []).filter(b => b.status === 'pending')
+      if (!pending.length) {
+        setMsg('No pending batch. Create a batch in Module 1 first.')
+        setStatus('error'); return
+      }
+      await api.assignBatch(pending[0].id, collectorId)
+      setMsg(`✅ Batch ${pending[0].batch_uid} assigned! Now go to Module 3 → EPR Dashboard.`)
+      setStatus('done')
+    } catch(e) { setMsg(`❌ ${e.message}`); setStatus('error') }
+  }
+
+  if (status === 'done') return (
+    <div style={{ fontSize: '0.72rem', color: 'var(--green-400)', maxWidth: 190, textAlign: 'right', lineHeight: 1.4 }}>{msg}</div>
+  )
+  return (
+    <div style={{ textAlign: 'right' }}>
+      <button className="btn btn-primary btn-sm" id={`assign-col-${collectorId}`}
+        onClick={handleAssign} disabled={status === 'loading'}>
+        {status === 'loading' ? 'Assigning…' : 'Assign to My Batch →'}
+      </button>
+      {status === 'error' && <div style={{ fontSize: '0.7rem', color: 'var(--rose-500)', marginTop: 4, maxWidth: 170 }}>{msg}</div>}
+    </div>
+  )
+}
+
 function Module2() {
-  const [orgs, setOrgs]         = useState([])
-  const [orgId, setOrgId]       = useState(1)
-  const [result, setResult]     = useState(null)
-  const [loading, setLoading]   = useState(false)
+  const [orgs, setOrgs]       = useState([])
+  const [orgId, setOrgId]     = useState(1)
+  const [result, setResult]   = useState(null)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => { api.getOrgs().then(d => setOrgs(d.organisations || [])) }, [])
 
-  const fetch = async () => {
+  const doFetch = async () => {
     setLoading(true)
     try { setResult(await api.matchCollectors(orgId)) }
     catch (e) { alert(e.message) }
@@ -238,7 +271,11 @@ function Module2() {
   return (
     <div className="anim-fade-up">
       <h2 className="section-title">Module 2 · Collector Matching</h2>
-      <p className="section-sub">Our Greedy algorithm scores each collector by capacity-fit × geographic proximity × rating to find your best match.</p>
+      <p className="section-sub">
+        Greedy algorithm scores collectors by capacity × proximity × rating.{' '}
+        <strong style={{ color: 'var(--green-400)' }}>Click "Assign to My Batch →"</strong>{' '}
+        to assign your pending batch, then check Module 3 for compliance.
+      </p>
       <div className="dsa-tag mb-4">⚙️ DSA: Greedy Algorithm — O(n) scan with composite scoring</div>
 
       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', marginBottom: 24 }}>
@@ -248,7 +285,9 @@ function Module2() {
             {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
           </select>
         </div>
-        <button className="btn btn-primary" onClick={fetch} disabled={loading}>{loading ? 'Matching…' : 'Find Best Collectors'}</button>
+        <button className="btn btn-primary" id="match-collectors-btn" onClick={doFetch} disabled={loading}>
+          {loading ? 'Matching…' : 'Find Best Collectors'}
+        </button>
       </div>
 
       {result && (
@@ -266,22 +305,27 @@ function Module2() {
                     <div className="entity-name">{c.name}</div>
                   </div>
                   <div className="entity-meta">{c.city} · {c.address}</div>
-                  <div className="entity-meta">{c.registration_number}</div>
+                  <div className="entity-meta mono" style={{ marginTop: 2 }}>{c.registration_number}</div>
                   <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <span className="badge badge-teal">Capacity: {c.weekly_capacity_kg} kg/wk</span>
                     <span className="badge badge-blue">Radius: {c.service_radius_km} km</span>
                     <span className="badge badge-amber">~{c.distance_approx} km away</span>
                   </div>
                 </div>
-                <div className="entity-score">
-                  <div className="entity-score-val">{c.match_score}</div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Match Score</div>
-                  <div className="rating-stars" style={{ marginTop: 4 }}>{'★'.repeat(Math.round(c.rating))}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10, flexShrink: 0 }}>
+                  <div className="entity-score">
+                    <div className="entity-score-val">{c.match_score}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Match Score</div>
+                    <div className="rating-stars" style={{ marginTop: 4 }}>{'★'.repeat(Math.round(c.rating))}</div>
+                  </div>
+                  <AssignButton collectorId={c.id} orgId={orgId} collectorName={c.name} />
                 </div>
               </div>
             ))}
           </div>
-          {!result.recommended_collectors.length && <div className="empty-state"><div className="empty-state-icon">🔍</div><p>No collectors found for this organisation's city</p></div>}
+          {!result.recommended_collectors.length && (
+            <div className="empty-state"><div className="empty-state-icon">🔍</div><p>No collectors found</p></div>
+          )}
         </div>
       )}
     </div>
