@@ -31,7 +31,7 @@ function Module0({ setActiveModule }) {
     e.preventDefault()
     try {
       const res = await api.registerOrg({ ...form, lat: 28.6315, lng: 77.2167, employee_count: Number(form.employee_count) })
-      setMsg(`✅ Registered! Org ID: ${res.org_id}`)
+      setMsg(` Registered! Org ID: ${res.org_id}`)
       const d = await api.getOrgs()
       setOrgs(d.organisations || [])
     } catch (e) { setMsg(`❌ ${e.message}`) }
@@ -71,7 +71,7 @@ function Module0({ setActiveModule }) {
                 {['Delhi','Mumbai','Bengaluru','Hyderabad','Pune','Chennai','Noida'].map(c => <option key={c}>{c}</option>)}
               </select>
             </div>
-            {msg && <div style={{ padding: '10px 14px', borderRadius: 8, background: msg.startsWith('✅') ? 'rgba(34,197,94,0.1)' : 'rgba(244,63,94,0.1)', color: msg.startsWith('✅') ? 'var(--green-400)' : 'var(--rose-500)', fontSize: '0.87rem', marginBottom: 12 }}>{msg}</div>}
+            {msg && <div style={{ padding: '10px 14px', borderRadius: 8, background: msg.startsWith('') ? 'rgba(34,197,94,0.1)' : 'rgba(244,63,94,0.1)', color: msg.startsWith('') ? 'var(--green-400)' : 'var(--rose-500)', fontSize: '0.87rem', marginBottom: 12 }}>{msg}</div>}
             <button className="btn btn-primary w-full" type="submit">Register Organisation</button>
           </form>
         </div>
@@ -193,7 +193,7 @@ function Module1() {
 
           {result && (
             <div className="card anim-fade-in">
-              <h3 style={{ fontWeight: 700, marginBottom: 12, color: 'var(--green-400)' }}>✅ Batch Created &amp; Triaged</h3>
+              <h3 style={{ fontWeight: 700, marginBottom: 12, color: 'var(--green-400)' }}> Batch Created &amp; Triaged</h3>
               <div style={{ marginBottom: 12 }}>
                 <span className="mono">Batch UID: </span>
                 <span className="mono bold green">{result.batch_uid}</span>
@@ -234,7 +234,7 @@ function AssignButton({ collectorId, orgId, collectorName }) {
         setStatus('error'); return
       }
       await api.assignBatch(pending[0].id, collectorId)
-      setMsg(`✅ Batch ${pending[0].batch_uid} assigned! Now go to Module 3 → EPR Dashboard.`)
+      setMsg(` Batch ${pending[0].batch_uid} assigned! Now go to Module 3 → EPR Dashboard.`)
       setStatus('done')
     } catch(e) { setMsg(`❌ ${e.message}`); setStatus('error') }
   }

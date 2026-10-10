@@ -109,7 +109,7 @@ BST inserted batches:
 Inorder traversal → [2.5, 35.0, 35.0] — sorted ascending
 range_query(10, 200) → returns batches with credit 35.0 ✓
 
-Compliance: 490 kg certified / 500 kg obligation = 98% ✅
+Compliance: 490 kg certified / 500 kg obligation = 98% 
 ```
 
 ---

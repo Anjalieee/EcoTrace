@@ -30,7 +30,7 @@ function Module0() {
     e.preventDefault()
     try {
       const res = await api.registerCollector({ ...form, lat: 28.63, lng: 77.21, accepted_types: ['IT Equipment', 'Batteries'] })
-      setMsg(`✅ Collector registered! ID: ${res.collector_id}`)
+      setMsg(` Collector registered! ID: ${res.collector_id}`)
       const d = await api.getAllCollectorsPortal()
       setCollectors(d.collectors || [])
     } catch (e) { setMsg(`❌ ${e.message}`) }
@@ -74,7 +74,7 @@ function Module0() {
                   onChange={e => setForm(p => ({ ...p, weekly_capacity_kg: Number(e.target.value) }))} />
               </div>
             </div>
-            {msg && <div style={{ padding: '10px 14px', borderRadius: 8, background: msg.startsWith('✅') ? 'rgba(34,197,94,0.1)' : 'rgba(244,63,94,0.1)', color: msg.startsWith('✅') ? 'var(--green-400)' : 'var(--rose-500)', fontSize: '0.87rem', marginBottom: 12 }}>{msg}</div>}
+            {msg && <div style={{ padding: '10px 14px', borderRadius: 8, background: msg.startsWith('') ? 'rgba(34,197,94,0.1)' : 'rgba(244,63,94,0.1)', color: msg.startsWith('') ? 'var(--green-400)' : 'var(--rose-500)', fontSize: '0.87rem', marginBottom: 12 }}>{msg}</div>}
             <button className="btn btn-primary w-full" type="submit">Register Collector</button>
           </form>
         </div>
@@ -136,7 +136,7 @@ function Module1() {
   const handleAssign = async (bId) => {
     try {
       await api.assignBatch(bId, colId)
-      setMsg('✅ Batch assigned!')
+      setMsg(' Batch assigned!')
       fetchFeed()
     } catch(e) { setMsg(`❌ ${e.message}`) }
   }
@@ -157,7 +157,7 @@ function Module1() {
         <button className="btn btn-primary" onClick={fetchFeed} disabled={loading}>{loading ? 'Loading…' : 'Load Feed'}</button>
       </div>
 
-      {msg && <div style={{ padding: '10px 14px', borderRadius: 8, background: msg.startsWith('✅') ? 'rgba(34,197,94,0.1)' : 'rgba(244,63,94,0.1)', color: msg.startsWith('✅') ? 'var(--green-400)' : 'var(--rose-500)', fontSize: '0.87rem', marginBottom: 16 }}>{msg}</div>}
+      {msg && <div style={{ padding: '10px 14px', borderRadius: 8, background: msg.startsWith('') ? 'rgba(34,197,94,0.1)' : 'rgba(244,63,94,0.1)', color: msg.startsWith('') ? 'var(--green-400)' : 'var(--rose-500)', fontSize: '0.87rem', marginBottom: 16 }}>{msg}</div>}
 
       {feed && (
         <div className="anim-fade-in">

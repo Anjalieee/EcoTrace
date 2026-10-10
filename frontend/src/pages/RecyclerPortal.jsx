@@ -30,7 +30,7 @@ function Module0() {
     e.preventDefault()
     try {
       const res = await api.registerRecycler({ ...form, lat: 28.53, lng: 77.39, accepted_types: ['IT Equipment'] })
-      setMsg(`✅ Recycler registered! ID: ${res.recycler_id}`)
+      setMsg(` Recycler registered! ID: ${res.recycler_id}`)
       const d = await api.getAllRecyclersPortal()
       setRecyclers(d.recyclers || [])
     } catch(e) { setMsg(`❌ ${e.message}`) }
@@ -75,7 +75,7 @@ function Module0() {
               <input className="form-input" type="number" value={form.weekly_capacity_kg}
                 onChange={e => setForm(p => ({ ...p, weekly_capacity_kg: Number(e.target.value) }))} />
             </div>
-            {msg && <div style={{ padding: '10px 14px', borderRadius: 8, background: msg.startsWith('✅') ? 'rgba(34,197,94,0.1)' : 'rgba(244,63,94,0.1)', color: msg.startsWith('✅') ? 'var(--green-400)' : 'var(--rose-500)', fontSize: '0.87rem', marginBottom: 12 }}>{msg}</div>}
+            {msg && <div style={{ padding: '10px 14px', borderRadius: 8, background: msg.startsWith('') ? 'rgba(34,197,94,0.1)' : 'rgba(244,63,94,0.1)', color: msg.startsWith('') ? 'var(--green-400)' : 'var(--rose-500)', fontSize: '0.87rem', marginBottom: 12 }}>{msg}</div>}
             <button className="btn btn-primary w-full" type="submit">Register Facility</button>
           </form>
         </div>
@@ -137,7 +137,7 @@ function Module1() {
   const handleReceive = async (bId) => {
     try {
       await api.receiveBatch(bId, recId)
-      setMsg('✅ Batch marked as received at recycler!')
+      setMsg(' Batch marked as received at recycler!')
       fetchBatches(recId)
     } catch(e) { setMsg(`❌ ${e.message}`) }
   }
@@ -159,7 +159,7 @@ function Module1() {
         </div>
       </div>
 
-      {msg && <div style={{ padding: '10px 14px', borderRadius: 8, background: msg.startsWith('✅') ? 'rgba(34,197,94,0.1)' : 'rgba(244,63,94,0.1)', color: msg.startsWith('✅') ? 'var(--green-400)' : 'var(--rose-500)', fontSize: '0.87rem', marginBottom: 16 }}>{msg}</div>}
+      {msg && <div style={{ padding: '10px 14px', borderRadius: 8, background: msg.startsWith('') ? 'rgba(34,197,94,0.1)' : 'rgba(244,63,94,0.1)', color: msg.startsWith('') ? 'var(--green-400)' : 'var(--rose-500)', fontSize: '0.87rem', marginBottom: 16 }}>{msg}</div>}
 
       {loading ? <div className="loading-wrap"><div className="loader" /></div> : (
         !allBatches.length ? (
@@ -338,7 +338,7 @@ function Module3() {
     e.preventDefault()
     try {
       const res = await api.issueCert({ ...form, recycler_id: recId })
-      setMsg(`✅ Certificate issued! UID: ${res.certificate_uid}`)
+      setMsg(` Certificate issued! UID: ${res.certificate_uid}`)
       fetchImpact(recId)
       api.getAllCertsRecycler().then(d => setAllCerts(d.certificates || []))
     } catch(e) { setMsg(`❌ ${e.message}`) }
@@ -402,7 +402,7 @@ function Module3() {
                 </div>
               ))}
             </div>
-            {msg && <div style={{ padding: '10px 14px', borderRadius: 8, background: msg.startsWith('✅') ? 'rgba(34,197,94,0.1)' : 'rgba(244,63,94,0.1)', color: msg.startsWith('✅') ? 'var(--green-400)' : 'var(--rose-500)', fontSize: '0.87rem', marginBottom: 12 }}>{msg}</div>}
+            {msg && <div style={{ padding: '10px 14px', borderRadius: 8, background: msg.startsWith('') ? 'rgba(34,197,94,0.1)' : 'rgba(244,63,94,0.1)', color: msg.startsWith('') ? 'var(--green-400)' : 'var(--rose-500)', fontSize: '0.87rem', marginBottom: 12 }}>{msg}</div>}
             <button className="btn btn-primary w-full" type="submit">Issue Certificate</button>
           </form>
         </div>
