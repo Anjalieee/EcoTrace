@@ -7,12 +7,13 @@ import uuid
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 from typing import List, Optional
+from dsa.kd_tree import collector_tree, recycler_tree
 
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from data.sample_data import (
-    ORGANISATIONS, BATCHES, DEVICES, COLLECTORS, CERTIFICATES,
+    ORGANISATIONS, BATCHES, DEVICES, COLLECTORS, RECYCLERS, CERTIFICATES,
     next_org_id, next_batch_id, get_impact_totals
 )
 from dsa.decision_tree import DeviceTriageDecisionTree
@@ -172,6 +173,22 @@ def match_collectors(org_id: int):
     }
 
 # ─── MODULE 3: EPR Compliance Dashboard (BST + Greedy range analysis) ──────────
+@router.get("/nearby-collectors")
+def get_nearby_collectors(lat: float, lng: float, k: int = 3, radius_km: float = 30):
+    """
+    k-d Tree query. radius_km defaults to 30 —
+    only collectors within 30km of the query point are returned.
+    """
+    collector_tree.load_from_db(list(COLLECTORS.values()))
+    results = collector_tree.find_within_radius((lat, lng), radius_km, k)
+    return results
+
+
+@router.get("/nearby-recyclers")
+def get_nearby_recyclers(lat: float, lng: float, k: int = 3, radius_km: float = 30):
+    recycler_tree.load_from_db(list(RECYCLERS.values()))
+    results = recycler_tree.find_within_radius((lat, lng), radius_km, k)
+    return results
 
 @router.get("/epr-dashboard/{org_id}")
 def epr_dashboard(org_id: int):
@@ -234,3 +251,4 @@ def epr_dashboard(org_id: int):
         "status_counts": status_counts,
         "dsa_used": "BST (EPR credit sort + range query) + Greedy (maximise EPR value ordering)",
     }
+

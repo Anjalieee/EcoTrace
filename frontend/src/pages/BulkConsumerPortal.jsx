@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import PipelineBar from '../components/PipelineBar'
 import EnvImpactCounter from '../components/EnvImpactCounter'
 import { api } from '../utils/api'
+import CollectorMap from '../components/bulk-consumer/CollectorMap'
 
 // ─── Status badge helper ────────────────────────────────────────────────────
 function StatusBadge({ status }) {
@@ -128,6 +129,8 @@ function Module1() {
     finally { setLoading(false) }
   }
 
+  const submittedOrg = result && orgs.find(org => org.id === result.data.org_id)
+
   return (
     <div className="anim-fade-up">
       <h2 className="section-title">Module 1 · Device Triage Engine</h2>
@@ -215,6 +218,22 @@ function Module1() {
           )}
         </div>
       </div>
+
+      {result && submittedOrg && (
+        <section style={{ marginTop: 24 }}>
+          <h2 className="section-title">Step 3 — Find a Collector Near You</h2>
+          <CollectorMap
+            orgLat={submittedOrg.lat}
+            orgLng={submittedOrg.lng}
+            orgName={submittedOrg.name}
+            batchId={result.batch_id}
+            batchUid={result.batch_uid}
+            onCollectorSelect={collector => {
+              console.log('Collector selected:', collector)
+            }}
+          />
+        </section>
+      )}
     </div>
   )
 }
