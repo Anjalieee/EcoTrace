@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://ecotrace-1q9a.onrender.com/api'
 
 async function request(method, path, body = null) {
   try {
