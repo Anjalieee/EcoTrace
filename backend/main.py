@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes import bulk_consumer, collector, recycler, data_routes
+from data.sample_data import COLLECTORS, DEVICES, RECYCLERS
+from dsa.kd_tree import collector_tree, recycler_tree
+from dsa.trie import load_device_trie
 
 app = FastAPI(
     title="EcoTrace API",
@@ -15,6 +18,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+def load_dsa_structures():
+    load_device_trie(DEVICES)
+    collector_tree.load_from_list(list(COLLECTORS.values()))
+    recycler_tree.load_from_list(list(RECYCLERS.values()))
 
 app.include_router(bulk_consumer.router, prefix="/api/bulk-consumer", tags=["Bulk Consumer"])
 app.include_router(collector.router,     prefix="/api/collector",     tags=["Collector"])

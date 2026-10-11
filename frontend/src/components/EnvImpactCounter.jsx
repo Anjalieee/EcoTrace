@@ -45,42 +45,42 @@ export default function EnvImpactCounter() {
   return (
     <div className="impact-strip anim-fade-in">
       <div className="impact-item">
-        <span className="impact-icon">⚖️</span>
+        <span className="impact-icon" aria-hidden="true">01</span>
         <div>
           <div className="impact-val"><AnimCount value={d.total_weight_kg} /> kg</div>
           <div className="impact-lab">E-waste processed</div>
         </div>
       </div>
       <div className="impact-item">
-        <span className="impact-icon">🌿</span>
+        <span className="impact-icon" aria-hidden="true">02</span>
         <div>
           <div className="impact-val"><AnimCount value={d.co2_avoided_kg} /> kg</div>
           <div className="impact-lab">CO₂ avoided</div>
         </div>
       </div>
       <div className="impact-item">
-        <span className="impact-icon">🔩</span>
+        <span className="impact-icon" aria-hidden="true">03</span>
         <div>
           <div className="impact-val"><AnimCount value={d.copper_recovered_kg} /> kg</div>
           <div className="impact-lab">Copper recovered</div>
         </div>
       </div>
       <div className="impact-item">
-        <span className="impact-icon">🥇</span>
+        <span className="impact-icon" aria-hidden="true">04</span>
         <div>
           <div className="impact-val"><AnimCount value={d.gold_recovered_g} /> g</div>
           <div className="impact-lab">Gold recovered</div>
         </div>
       </div>
       <div className="impact-item">
-        <span className="impact-icon">📜</span>
+        <span className="impact-icon" aria-hidden="true">05</span>
         <div>
           <div className="impact-val"><AnimCount value={d.certificates_issued} /></div>
           <div className="impact-lab">EPR certificates</div>
         </div>
       </div>
       <div className="impact-item">
-        <span className="impact-icon">🏢</span>
+        <span className="impact-icon" aria-hidden="true">06</span>
         <div>
           <div className="impact-val"><AnimCount value={d.orgs_registered} /></div>
           <div className="impact-lab">Orgs registered</div>

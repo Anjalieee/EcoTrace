@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react'
 import PipelineBar from '../components/PipelineBar'
 import EnvImpactCounter from '../components/EnvImpactCounter'
 import { api } from '../utils/api'
+import { CITIES, getCityCoordinates } from '../utils/cities'
 
 function StatusBadge({ status }) {
   const map = {
     pending:            ['badge-amber',  'Pending'],
+    pickup_requested:   ['badge-amber',  'Pickup Requested'],
     collector_assigned: ['badge-blue',   'Assigned'],
     collected:          ['badge-teal',   'Collected'],
     at_recycler:        ['badge-purple', 'At Recycler'],
@@ -19,8 +21,10 @@ function StatusBadge({ status }) {
 function Module0() {
   const [recyclers, setRecyclers] = useState([])
   const [loading, setLoading]    = useState(true)
-  const [form, setForm] = useState({ name: '', registration_number: '', address: '', city: 'Noida', specialisation: 'IT Equipment', weekly_capacity_kg: 2000 })
+  const [selectedCity, setSelectedCity] = useState('Delhi')
+  const [form, setForm] = useState({ name: '', registration_number: '', address: '', city: 'Delhi', specialisation: 'IT Equipment', weekly_capacity_kg: 2000 })
   const [msg, setMsg] = useState('')
+  const cityRecyclers = recyclers.filter(r => r.city.toLowerCase() === selectedCity.toLowerCase())
 
   useEffect(() => {
     api.getAllRecyclersPortal().then(d => setRecyclers(d.recyclers || [])).finally(() => setLoading(false))
@@ -29,8 +33,10 @@ function Module0() {
   const handleSubmit = async e => {
     e.preventDefault()
     try {
-      const res = await api.registerRecycler({ ...form, lat: 28.53, lng: 77.39, accepted_types: ['IT Equipment'] })
+      const location = getCityCoordinates(form.city)
+      const res = await api.registerRecycler({ ...form, ...location, accepted_types: ['IT Equipment'] })
       setMsg(` Recycler registered! ID: ${res.recycler_id}`)
+      setSelectedCity(form.city)
       const d = await api.getAllRecyclersPortal()
       setRecyclers(d.recyclers || [])
     } catch(e) { setMsg(`❌ ${e.message}`) }
@@ -38,7 +44,7 @@ function Module0() {
 
   return (
     <div className="anim-fade-up">
-      <h2 className="section-title">Module 0 · Registry &amp; Capacity</h2>
+      <h2 className="section-title">Facility registration</h2>
       <p className="section-sub">Register as a CPCB-certified recycler. Your capacity and recovery rates are visible to the entire network.</p>
 
       <div className="grid-2" style={{ gap: 24 }}>
@@ -60,7 +66,7 @@ function Module0() {
               <div className="form-group">
                 <label className="form-label">City</label>
                 <select className="form-input form-select" value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))}>
-                  {['Delhi','Mumbai','Bengaluru','Hyderabad','Noida','Pune','Chennai'].map(c => <option key={c}>{c}</option>)}
+                  {CITIES.map(c => <option key={c}>{c}</option>)}
                 </select>
               </div>
               <div className="form-group">
@@ -81,9 +87,14 @@ function Module0() {
         </div>
 
         <div className="card" style={{ overflowY: 'auto', maxHeight: 520 }}>
-          <h3 style={{ fontWeight: 700, marginBottom: 16 }}>CPCB-Certified Recyclers <span className="badge badge-green">{recyclers.length}</span></h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <h3 style={{ fontWeight: 700 }}>Recyclers in {selectedCity} <span className="badge badge-green">{cityRecyclers.length}</span></h3>
+            <select aria-label="Filter recyclers by city" className="form-input form-select" style={{ maxWidth: 150 }} value={selectedCity} onChange={e => setSelectedCity(e.target.value)}>
+              {CITIES.map(city => <option key={city}>{city}</option>)}
+            </select>
+          </div>
           {loading ? <div className="loading-wrap"><div className="loader" /></div> :
-            recyclers.map(r => (
+            cityRecyclers.map(r => (
               <div className="card card-sm" key={r.id} style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                   <div>
@@ -99,10 +110,6 @@ function Module0() {
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <span className="badge badge-teal">{r.weekly_capacity_kg} kg/wk</span>
                   <span className="badge badge-green">CO₂: {r.co2_avoided_total_kg.toLocaleString()} kg saved</span>
-                </div>
-                <div style={{ marginTop: 8 }}>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 4 }}>Capacity utilised</div>
-                  <div className="progress-track"><div className="progress-fill" style={{ width: `${Math.random() * 70 + 20}%` }} /></div>
                 </div>
               </div>
             ))
@@ -146,7 +153,7 @@ function Module1() {
 
   return (
     <div className="anim-fade-up">
-      <h2 className="section-title">Module 1 · Incoming Batch Feed</h2>
+      <h2 className="section-title">Incoming batches</h2>
       <p className="section-sub">View all batches arriving at this recycling facility. Confirm receipt and begin processing.</p>
 
       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', marginBottom: 24 }}>
@@ -163,7 +170,7 @@ function Module1() {
 
       {loading ? <div className="loading-wrap"><div className="loader" /></div> : (
         !allBatches.length ? (
-          <div className="empty-state"><div className="empty-state-icon">📭</div><p>No batches received at this facility yet</p></div>
+          <div className="empty-state"><p>No batches have arrived at this facility yet.</p></div>
         ) : (
           <div className="table-wrap">
             <table>
@@ -178,10 +185,12 @@ function Module1() {
                     <td>{b.collector_name || `Col #${b.collector_id}`}</td>
                     <td>{b.estimated_weight_kg} kg</td>
                     <td>{b.total_devices}</td>
-                    <td><StatusBadge status={b.status} /></td>
+                    <td><StatusBadge status={b.pickup_request?.provider_type === 'recycler' && b.requested_recycler_id === recId ? 'pickup_requested' : b.status} /></td>
                     <td>
-                      {b.status === 'collected' && (
-                        <button className="btn btn-secondary btn-sm" onClick={() => handleReceive(b.id)}>Receive</button>
+                      {(b.status === 'collected' || (b.status === 'pending' && b.requested_recycler_id === recId)) && (
+                        <button className="btn btn-secondary btn-sm" onClick={() => handleReceive(b.id)}>
+                          {b.status === 'collected' ? 'Receive' : 'Confirm Pickup'}
+                        </button>
                       )}
                     </td>
                   </tr>
@@ -211,8 +220,8 @@ function Module2() {
 
   return (
     <div className="anim-fade-up">
-      <h2 className="section-title">Module 2 · Network View</h2>
-      <p className="section-sub">Full collector → recycler network graph. Shows all active connections and batch flows.</p>
+      <h2 className="section-title">Partner network</h2>
+      <p className="section-sub">View active collection and recycling partners and follow batch handovers.</p>
 
       {network && (
         <div className="grid-3 mb-4" style={{ gap: 16, marginBottom: 24 }}>
@@ -225,7 +234,7 @@ function Module2() {
       <div className="grid-2" style={{ gap: 24 }}>
         {/* Collectors column */}
         <div>
-          <h3 style={{ fontWeight: 700, marginBottom: 12 }}>🚛 Collectors <span className="badge badge-blue">{collectors.length}</span></h3>
+          <h3 style={{ fontWeight: 700, marginBottom: 12 }}>Collectors <span className="badge badge-blue">{collectors.length}</span></h3>
           {collectors.map(c => (
             <div className="card card-sm" key={c.id} style={{ marginBottom: 10 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -258,16 +267,16 @@ function Module2() {
 
         {/* Recyclers column */}
         <div>
-          <h3 style={{ fontWeight: 700, marginBottom: 12 }}>♻️ Recyclers <span className="badge badge-purple">{recyclers.length}</span></h3>
+          <h3 style={{ fontWeight: 700, marginBottom: 12 }}>Recyclers <span className="badge badge-green">{recyclers.length}</span></h3>
           {recyclers.map(r => (
-            <div className="card card-sm" key={r.id} style={{ marginBottom: 10, borderColor: 'rgba(192,132,252,0.15)' }}>
+            <div className="card card-sm" key={r.id} style={{ marginBottom: 10 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: 2 }}>{r.name}</div>
                   <div className="entity-meta">{r.city} · {r.capacity_kg?.toLocaleString()} kg/wk</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--purple-400)' }}>{r.recovery_rate}%</div>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--green-400)' }}>{r.recovery_rate}%</div>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Recovery</div>
                 </div>
               </div>
@@ -282,7 +291,7 @@ function Module2() {
       {/* Edge list*/}
       {network?.edges?.length > 0 && (
         <div className="card" style={{ marginTop: 24 }}>
-          <h3 style={{ fontWeight: 700, marginBottom: 12 }}>All Batch Flows (Graph Edges)</h3>
+          <h3 style={{ fontWeight: 700, marginBottom: 12 }}>Batch handovers</h3>
           <div className="table-wrap">
             <table>
               <thead><tr><th>From (Collector)</th><th>To (Recycler)</th><th>Batch UID</th><th>Weight</th><th>Status</th></tr></thead>
@@ -354,9 +363,8 @@ function Module3() {
 
   return (
     <div className="anim-fade-up">
-      <h2 className="section-title">Module 3 · Certificate Issuance &amp; Impact</h2>
-      <p className="section-sub">Issue EPR certificates for processed batches. Trie enables O(m) certificate UID prefix search.</p>
-      <div className="dsa-tag mb-4">⚙️ DSA: Trie — O(m) prefix search across all certificate UIDs stored in Trie nodes</div>
+      <h2 className="section-title">Certificates &amp; impact</h2>
+      <p className="section-sub">Issue certificates for processed batches and review facility impact.</p>
 
       {/* Recycler selector */}
       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', marginBottom: 24 }}>
@@ -407,10 +415,10 @@ function Module3() {
           </form>
         </div>
 
-        {/* Trie search + cert list */}
+        {/* Certificate search and records */}
         <div>
           <div className="card" style={{ marginBottom: 16 }}>
-            <h3 style={{ fontWeight: 700, marginBottom: 12 }}>🔍 Certificate Trie Search</h3>
+            <h3 style={{ fontWeight: 700, marginBottom: 12 }}>Find a certificate</h3>
             <div style={{ display: 'flex', gap: 8 }}>
               <input className="form-input" placeholder="Enter UID prefix e.g. CERT-9A" value={searchPrefix}
                 onChange={e => setSearchPrefix(e.target.value)} style={{ flex: 1 }} />
@@ -448,10 +456,10 @@ function Module3() {
 }
 
 const RECYCLER_MODULES = [
-  { id: 0, icon: '🏭', label: 'Registry & Capacity',      component: Module0 },
-  { id: 1, icon: '📥', label: 'Incoming Batch Feed',       component: Module1 },
-  { id: 2, icon: '🌐', label: 'Network View',              component: Module2 },
-  { id: 3, icon: '📜', label: 'Certificate Issuance',      component: Module3 },
+  { id: 0, label: 'Facility details', component: Module0 },
+  { id: 1, label: 'Incoming batches', component: Module1 },
+  { id: 2, label: 'Partner network', component: Module2 },
+  { id: 3, label: 'Certificates', component: Module3 },
 ]
 
 export default function RecyclerPortal() {
@@ -463,12 +471,12 @@ export default function RecyclerPortal() {
       <aside className="portal-sidebar">
         <div>
           <div style={{ padding: '12px 12px 4px', fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-            ♻️ Recycler Portal
+            Recycler workspace
           </div>
           {RECYCLER_MODULES.map(m => (
             <button key={m.id} className={`sidebar-btn ${active === m.id ? 'active' : ''}`} onClick={() => setActive(m.id)}>
-              <span className="sidebar-icon">{m.icon}</span>
-              <span>Module {m.id} · {m.label}</span>
+              <span className="sidebar-icon">0{m.id + 1}</span>
+              <span>{m.label}</span>
             </button>
           ))}
         </div>

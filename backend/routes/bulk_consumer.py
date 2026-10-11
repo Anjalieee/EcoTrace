@@ -7,7 +7,8 @@ import uuid
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 from typing import List, Optional
-from dsa.kd_tree import collector_tree, recycler_tree
+from dsa.kd_tree import KDTree, collector_tree, recycler_tree
+from dsa.trie import device_trie
 
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -68,9 +69,19 @@ def register_org(org: OrgRegister):
 def list_devices():
     return {"devices": list(DEVICES.values())}
 
+@router.get("/devices/search")
+def search_devices(q: str, limit: int = 10):
+    if limit < 1 or limit > 100:
+        raise HTTPException(status_code=400, detail="limit must be between 1 and 100")
+    return device_trie.autocomplete(q.strip(), limit) if q.strip() else []
+
 class BatchSubmit(BaseModel):
     org_id: int
     devices: List[dict]   # [{"device_id": 1, "quantity": 5}, ...]
+
+class PickupRequest(BaseModel):
+    provider_type: str
+    provider_id: int
 
 @router.post("/batch/create")
 def create_batch(batch: BatchSubmit):
@@ -136,6 +147,40 @@ def get_org_batches(org_id: int):
     result = [b for b in BATCHES.values() if b["org_id"] == org_id]
     return {"batches": result, "total": len(result)}
 
+@router.post("/batch/{batch_id}/pickup-request")
+def request_pickup(batch_id: int, request: PickupRequest):
+    batch = BATCHES.get(batch_id)
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+    if batch["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Pickup can only be requested for pending batches")
+
+    if request.provider_type == "collector":
+        provider = COLLECTORS.get(request.provider_id)
+        if not provider or not provider["is_available"]:
+            raise HTTPException(status_code=404, detail="Available collector not found")
+        batch["collector_id"] = request.provider_id
+        batch["status"] = "collector_assigned"
+    elif request.provider_type == "recycler":
+        provider = RECYCLERS.get(request.provider_id)
+        if not provider or not provider["is_available"]:
+            raise HTTPException(status_code=404, detail="Available recycler not found")
+        batch["requested_recycler_id"] = request.provider_id
+    else:
+        raise HTTPException(status_code=400, detail="Provider type must be collector or recycler")
+
+    batch["pickup_request"] = {
+        "provider_type": request.provider_type,
+        "provider_id": request.provider_id,
+    }
+    return {
+        "message": "Pickup request submitted",
+        "batch_uid": batch["batch_uid"],
+        "provider_type": request.provider_type,
+        "provider_name": provider["name"],
+        "status": batch["status"],
+    }
+
 # ─── MODULE 2: Collector Matching (Greedy + KD-Tree) ──────────────────────────
 
 @router.get("/match-collectors/{org_id}")
@@ -152,16 +197,21 @@ def match_collectors(org_id: int):
     pending = [b for b in BATCHES.values() if b["org_id"] == org_id and b["status"] == "pending"]
     total_pending_weight = sum(b["estimated_weight_kg"] for b in pending)
 
-    # Greedy scoring: proximity + capacity
+    # Greedy scoring is limited to available collectors serving this city.
     scored = []
     for c in COLLECTORS.values():
-        if not c["is_available"]:
+        if not c["is_available"] or c["city"].casefold() != org["city"].casefold():
             continue
-        dist = ((org["lat"] - c["lat"])**2 + (org["lng"] - c["lng"])**2) ** 0.5
+        dist = KDTree.haversine_km(
+            (float(org["lat"]), float(org["lng"])),
+            (float(c["lat"]), float(c["lng"])),
+        )
+        if dist > float(c.get("service_radius_km", 9999)):
+            continue
         capacity_score = min(c["weekly_capacity_kg"] / max(total_pending_weight, 1), 5.0)
-        proximity_score = max(0, 10 - dist * 100)
+        proximity_score = max(0, 10 - dist / 10)
         total_score = round((capacity_score * 0.5 + proximity_score * 0.3 + c["rating"] * 0.2), 2)
-        scored.append({**c, "match_score": total_score, "distance_approx": round(dist * 111, 1)})  # 1 deg ≈ 111 km
+        scored.append({**c, "match_score": total_score, "distance_approx": round(dist, 1)})
 
     scored.sort(key=lambda x: x["match_score"], reverse=True)
     return {
@@ -174,21 +224,21 @@ def match_collectors(org_id: int):
 
 # ─── MODULE 3: EPR Compliance Dashboard (BST + Greedy range analysis) ──────────
 @router.get("/nearby-collectors")
-def get_nearby_collectors(lat: float, lng: float, k: int = 3, radius_km: float = 30):
+def get_nearby_collectors(lat: float, lng: float, k: int = 3, radius_km: float = 30, city: Optional[str] = None):
     """
     k-d Tree query. radius_km defaults to 30 —
     only collectors within 30km of the query point are returned.
     """
-    collector_tree.load_from_db(list(COLLECTORS.values()))
-    results = collector_tree.find_within_radius((lat, lng), radius_km, k)
-    return results
+    return collector_tree.find_within_radius(
+        (lat, lng), radius_km, k, city=city, available_only=True
+    )
 
 
 @router.get("/nearby-recyclers")
-def get_nearby_recyclers(lat: float, lng: float, k: int = 3, radius_km: float = 30):
-    recycler_tree.load_from_db(list(RECYCLERS.values()))
-    results = recycler_tree.find_within_radius((lat, lng), radius_km, k)
-    return results
+def get_nearby_recyclers(lat: float, lng: float, k: int = 3, radius_km: float = 30, city: Optional[str] = None):
+    return recycler_tree.find_within_radius(
+        (lat, lng), radius_km, k, city=city, available_only=True
+    )
 
 @router.get("/epr-dashboard/{org_id}")
 def epr_dashboard(org_id: int):

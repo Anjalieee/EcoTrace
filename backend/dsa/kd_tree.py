@@ -17,20 +17,21 @@ class KDTree:
         if not points:
             return None
         axis = depth % 2
-        points.sort(key=lambda x: x["point"][axis])
-        mid = len(points) // 2
+        ordered_points = sorted(points, key=lambda item: item["point"][axis])
+        mid = len(ordered_points) // 2
         return KDNode(
-            point=points[mid]["point"],
-            entity_id=points[mid]["id"],
-            entity_data=points[mid]["data"],
-            left=self._build(points[:mid], depth + 1),
-            right=self._build(points[mid + 1:], depth + 1)
+            point=ordered_points[mid]["point"],
+            entity_id=ordered_points[mid]["id"],
+            entity_data=ordered_points[mid]["data"],
+            left=self._build(ordered_points[:mid], depth + 1),
+            right=self._build(ordered_points[mid + 1:], depth + 1)
         )
 
     def build(self, entities: list):
         self.root = self._build(entities)
 
-    def _haversine_km(self, p1: tuple, p2: tuple) -> float:
+    @staticmethod
+    def haversine_km(p1: tuple, p2: tuple) -> float:
         """
         Accurate distance in km between two (lat, lng) points.
         Uses Haversine formula — critical for geographic correctness.
@@ -43,8 +44,10 @@ class KDTree:
         lat2, lon2 = math.radians(p2[0]), math.radians(p2[1])
         dlat = lat2 - lat1
         dlon = lon2 - lon1
-        a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
-        return R * 2 * math.asin(math.sqrt(a))
+        a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+        return R * 2 * math.asin(math.sqrt(min(1.0, a)))
+
+    _haversine_km = haversine_km
 
     def _collect_all(self, node: KDNode, result: list):
         if node is None:
@@ -53,7 +56,8 @@ class KDTree:
         self._collect_all(node.left, result)
         self._collect_all(node.right, result)
 
-    def find_within_radius(self, target: tuple, radius_km: float, k: int = 5) -> list:
+    def find_within_radius(self, target: tuple, radius_km: float, k: int = 5,
+                           city: str = None, available_only: bool = False) -> list:
         """
         Returns up to k entities whose own service_radius_km covers the target point
         AND whose actual distance from target is within radius_km.
@@ -70,16 +74,21 @@ class KDTree:
 
         results = []
         for node in all_nodes:
-            actual_dist = self._haversine_km(node.point, target)
+            entity = node.entity_data
+            if city and entity.get("city", "").casefold() != city.casefold():
+                continue
+            if available_only and not entity.get("is_available", True):
+                continue
+            actual_dist = self.haversine_km(node.point, target)
 
             # Get this entity's own declared service radius
             entity_service_radius = float(
-                node.entity_data.get("service_radius_km", 9999)
+                entity.get("service_radius_km", 9999)
             )
 
             # Both conditions must be true
             if actual_dist <= radius_km and actual_dist <= entity_service_radius:
-                data = dict(node.entity_data)
+                data = dict(entity)
                 data["distance_km"] = round(actual_dist, 2)
                 results.append(data)
 
@@ -96,6 +105,9 @@ class KDTree:
         return self.find_within_radius(target, max_radius_km, k)
 
     def load_from_db(self, entities: list):
+        self.load_from_list(entities)
+
+    def load_from_list(self, entities: list):
         points = [
             {
                 "id": e["id"],

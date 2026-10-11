@@ -3,6 +3,7 @@ import PipelineBar from '../components/PipelineBar'
 import EnvImpactCounter from '../components/EnvImpactCounter'
 import { api } from '../utils/api'
 import CollectorMap from '../components/bulk-consumer/CollectorMap'
+import { CITIES, getCityCoordinates } from '../utils/cities'
 
 // ─── Status badge helper ────────────────────────────────────────────────────
 function StatusBadge({ status }) {
@@ -21,8 +22,10 @@ function StatusBadge({ status }) {
 function Module0({ setActiveModule }) {
   const [orgs, setOrgs]     = useState([])
   const [loading, setLoading] = useState(true)
+  const [selectedCity, setSelectedCity] = useState('Delhi')
   const [form, setForm]     = useState({ name: '', gst_number: '', org_type: 'IT Company', address: '', city: 'Delhi', employee_count: 100 })
   const [msg, setMsg]       = useState('')
+  const cityOrgs = orgs.filter(o => o.city.toLowerCase() === selectedCity.toLowerCase())
 
   useEffect(() => {
     api.getOrgs().then(d => setOrgs(d.organisations || [])).finally(() => setLoading(false))
@@ -31,8 +34,10 @@ function Module0({ setActiveModule }) {
   const handleSubmit = async e => {
     e.preventDefault()
     try {
-      const res = await api.registerOrg({ ...form, lat: 28.6315, lng: 77.2167, employee_count: Number(form.employee_count) })
+      const location = getCityCoordinates(form.city)
+      const res = await api.registerOrg({ ...form, ...location, employee_count: Number(form.employee_count) })
       setMsg(` Registered! Org ID: ${res.org_id}`)
+      setSelectedCity(form.city)
       const d = await api.getOrgs()
       setOrgs(d.organisations || [])
     } catch (e) { setMsg(`❌ ${e.message}`) }
@@ -40,8 +45,8 @@ function Module0({ setActiveModule }) {
 
   return (
     <div className="anim-fade-up">
-      <h2 className="section-title">Module 0 · Registry &amp; Visibility</h2>
-      <p className="section-sub">Register your organisation under India's E-Waste Rules 2022. Each registered entity gets an EPR obligation estimate.</p>
+      <h2 className="section-title">Organisation registration</h2>
+      <p className="section-sub">Add your organisation details to begin tracking equipment collection and compliance.</p>
 
       <div className="grid-2" style={{ gap: 24 }}>
         {/* ─ Registration Form ─ */}
@@ -69,7 +74,7 @@ function Module0({ setActiveModule }) {
             <div className="form-group">
               <label className="form-label">City</label>
               <select className="form-input form-select" value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))}>
-                {['Delhi','Mumbai','Bengaluru','Hyderabad','Pune','Chennai','Noida'].map(c => <option key={c}>{c}</option>)}
+                {CITIES.map(c => <option key={c}>{c}</option>)}
               </select>
             </div>
             {msg && <div style={{ padding: '10px 14px', borderRadius: 8, background: msg.startsWith('') ? 'rgba(34,197,94,0.1)' : 'rgba(244,63,94,0.1)', color: msg.startsWith('') ? 'var(--green-400)' : 'var(--rose-500)', fontSize: '0.87rem', marginBottom: 12 }}>{msg}</div>}
@@ -79,9 +84,14 @@ function Module0({ setActiveModule }) {
 
         {/* ─ Registered Orgs List ─ */}
         <div className="card" style={{ overflowY: 'auto', maxHeight: 520 }}>
-          <h3 style={{ fontWeight: 700, marginBottom: 16 }}>Registered Organisations <span className="badge badge-green">{orgs.length}</span></h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <h3 style={{ fontWeight: 700 }}>Organisations in {selectedCity} <span className="badge badge-green">{cityOrgs.length}</span></h3>
+            <select aria-label="Filter organisations by city" className="form-input form-select" style={{ maxWidth: 150 }} value={selectedCity} onChange={e => setSelectedCity(e.target.value)}>
+              {CITIES.map(city => <option key={city}>{city}</option>)}
+            </select>
+          </div>
           {loading ? <div className="loading-wrap"><div className="loader" /></div> :
-            orgs.map(o => (
+            cityOrgs.map(o => (
               <div className="entity-card mb-4" key={o.id} style={{ marginBottom: 12 }}>
                 <div>
                   <div className="entity-name">{o.name}</div>
@@ -102,7 +112,7 @@ function Module0({ setActiveModule }) {
 }
 
 // ─── MODULE 1: Device Triage ─────────────────────────────────────────────────
-function Module1() {
+function Module1({ setActiveModule, onBatchCreated }) {
   const [devices, setDevices]   = useState([])
   const [orgs, setOrgs]         = useState([])
   const [orgId, setOrgId]       = useState(1)
@@ -125,17 +135,16 @@ function Module1() {
       const devArr = Object.entries(cart).map(([did, qty]) => ({ device_id: Number(did), quantity: qty }))
       const res = await api.createBatch({ org_id: orgId, devices: devArr })
       setResult(res)
+      onBatchCreated({ ...res, orgId, org: orgs.find(org => org.id === orgId) })
+      setActiveModule(2)
     } catch(e) { alert(e.message) }
     finally { setLoading(false) }
   }
 
-  const submittedOrg = result && orgs.find(org => org.id === result.data.org_id)
-
   return (
     <div className="anim-fade-up">
-      <h2 className="section-title">Module 1 · Device Triage Engine</h2>
-      <p className="section-sub">Select your e-waste devices. Our Decision Tree classifies each as refurbishable, recyclable, or hazardous.</p>
-      <div className="dsa-tag mb-4">⚙️ DSA: Decision Tree — maps device category to disposal pathway</div>
+      <h2 className="section-title">Equipment records</h2>
+      <p className="section-sub">Select the equipment for collection. Items are grouped by their recommended handling route.</p>
 
       {/* Org Selector */}
       <div className="form-group" style={{ maxWidth: 320, marginBottom: 20 }}>
@@ -175,7 +184,7 @@ function Module1() {
           <div className="card" style={{ marginBottom: 16 }}>
             <h3 style={{ fontWeight: 700, marginBottom: 12 }}>Selected Devices</h3>
             {!Object.keys(cart).length ? (
-              <div className="empty-state"><div className="empty-state-icon">📦</div><p>No devices added yet</p></div>
+              <div className="empty-state"><p>No equipment selected yet</p></div>
             ) : (
               <>
                 {Object.entries(cart).map(([did, qty]) => {
@@ -219,21 +228,6 @@ function Module1() {
         </div>
       </div>
 
-      {result && submittedOrg && (
-        <section style={{ marginTop: 24 }}>
-          <h2 className="section-title">Step 3 — Find a Collector Near You</h2>
-          <CollectorMap
-            orgLat={submittedOrg.lat}
-            orgLng={submittedOrg.lng}
-            orgName={submittedOrg.name}
-            batchId={result.batch_id}
-            batchUid={result.batch_uid}
-            onCollectorSelect={collector => {
-              console.log('Collector selected:', collector)
-            }}
-          />
-        </section>
-      )}
     </div>
   )
 }
@@ -249,11 +243,11 @@ function AssignButton({ collectorId, orgId, collectorName }) {
       const batchesRes = await api.getOrgBatches(orgId)
       const pending = (batchesRes.batches || []).filter(b => b.status === 'pending')
       if (!pending.length) {
-        setMsg('No pending batch. Create a batch in Module 1 first.')
+        setMsg('No batch is waiting for collection. Add equipment and prepare a batch first.')
         setStatus('error'); return
       }
       await api.assignBatch(pending[0].id, collectorId)
-      setMsg(` Batch ${pending[0].batch_uid} assigned! Now go to Module 3 → EPR Dashboard.`)
+      setMsg(`Batch ${pending[0].batch_uid} assigned. You can follow its progress in the compliance dashboard.`)
       setStatus('done')
     } catch(e) { setMsg(`❌ ${e.message}`); setStatus('error') }
   }
@@ -272,13 +266,19 @@ function AssignButton({ collectorId, orgId, collectorName }) {
   )
 }
 
-function Module2() {
+function Module2({ activeBatch }) {
   const [orgs, setOrgs]       = useState([])
-  const [orgId, setOrgId]     = useState(1)
+  const [orgId, setOrgId]     = useState(activeBatch?.orgId || 1)
   const [result, setResult]   = useState(null)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => { api.getOrgs().then(d => setOrgs(d.organisations || [])) }, [])
+
+  useEffect(() => {
+    if (!activeBatch?.orgId) return
+    setOrgId(activeBatch.orgId)
+    api.matchCollectors(activeBatch.orgId).then(setResult).catch(e => alert(e.message))
+  }, [activeBatch?.orgId])
 
   const doFetch = async () => {
     setLoading(true)
@@ -289,13 +289,25 @@ function Module2() {
 
   return (
     <div className="anim-fade-up">
-      <h2 className="section-title">Module 2 · Collector Matching</h2>
+      <h2 className="section-title">Arrange collection</h2>
       <p className="section-sub">
-        Greedy algorithm scores collectors by capacity × proximity × rating.{' '}
-        <strong style={{ color: 'var(--green-400)' }}>Click "Assign to My Batch →"</strong>{' '}
-        to assign your pending batch, then check Module 3 for compliance.
+        Compare nearby collection providers and choose the best fit for your organisation.
       </p>
-      <div className="dsa-tag mb-4">⚙️ DSA: Greedy Algorithm — O(n) scan with composite scoring</div>
+
+      {activeBatch?.org && (
+        <section style={{ marginBottom: 24 }}>
+          <h3 style={{ fontWeight: 700, marginBottom: 8 }}>Choose a nearby provider for pickup</h3>
+          <p className="section-sub">Batch {activeBatch.batch_uid} · {activeBatch.org.name} · {activeBatch.org.city}</p>
+          <CollectorMap
+            orgLat={activeBatch.org.lat}
+            orgLng={activeBatch.org.lng}
+            orgName={activeBatch.org.name}
+            orgCity={activeBatch.org.city}
+            batchId={activeBatch.batch_id}
+            batchUid={activeBatch.batch_uid}
+          />
+        </section>
+      )}
 
       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', marginBottom: 24 }}>
         <div className="form-group" style={{ flex: 1, maxWidth: 320, marginBottom: 0 }}>
@@ -343,7 +355,7 @@ function Module2() {
             ))}
           </div>
           {!result.recommended_collectors.length && (
-            <div className="empty-state"><div className="empty-state-icon">🔍</div><p>No collectors found</p></div>
+            <div className="empty-state"><p>No collection providers found for this organisation.</p></div>
           )}
         </div>
       )}
@@ -390,9 +402,8 @@ function Module3() {
 
   return (
     <div className="anim-fade-up">
-      <h2 className="section-title">Module 3 · EPR Compliance Dashboard</h2>
-      <p className="section-sub">Track your EPR obligation compliance. Certificates sorted via BST for range queries.</p>
-      <div className="dsa-tag mb-4">⚙️ DSA: Binary Search Tree — EPR credits sorted for O(log n) range queries</div>
+      <h2 className="section-title">Compliance overview</h2>
+      <p className="section-sub">Review your annual obligation, certified weight, and environmental impact.</p>
 
       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', marginBottom: 24 }}>
         <div className="form-group" style={{ flex: 1, maxWidth: 320, marginBottom: 0 }}>
@@ -447,7 +458,7 @@ function Module3() {
           {/* Certificates Table */}
           {data.certificates?.length > 0 && (
             <div className="card">
-              <h3 style={{ fontWeight: 700, marginBottom: 16 }}>EPR Certificates (BST-sorted by credit value)</h3>
+              <h3 style={{ fontWeight: 700, marginBottom: 16 }}>EPR certificates</h3>
               <div className="table-wrap">
                 <table>
                   <thead><tr><th>Certificate UID</th><th>Weight (kg)</th><th>CO₂ Avoided</th><th>Copper (kg)</th><th>Gold (g)</th><th>Issued</th></tr></thead>
@@ -475,14 +486,15 @@ function Module3() {
 
 // ─── Portal Wrapper ───────────────────────────────────────────────────────────
 const MODULES = [
-  { id: 0, icon: '📋', label: 'Registry & Visibility',  component: Module0 },
-  { id: 1, icon: '🔬', label: 'Device Triage Engine',   component: Module1 },
-  { id: 2, icon: '🤝', label: 'Collector Matching',     component: Module2 },
-  { id: 3, icon: '📊', label: 'EPR Dashboard',          component: Module3 },
+  { id: 0, label: 'Organisation', component: Module0 },
+  { id: 1, label: 'Equipment', component: Module1 },
+  { id: 2, label: 'Collection', component: Module2 },
+  { id: 3, label: 'Compliance', component: Module3 },
 ]
 
 export default function BulkConsumerPortal() {
   const [active, setActive] = useState(0)
+  const [activeBatch, setActiveBatch] = useState(null)
   const ActiveComp = MODULES[active].component
 
   return (
@@ -490,12 +502,12 @@ export default function BulkConsumerPortal() {
       <aside className="portal-sidebar">
         <div>
           <div style={{ padding: '12px 12px 4px', fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-            🏢 Bulk Consumer
+            Bulk consumer
           </div>
           {MODULES.map(m => (
             <button key={m.id} className={`sidebar-btn ${active === m.id ? 'active' : ''}`} onClick={() => setActive(m.id)}>
-              <span className="sidebar-icon">{m.icon}</span>
-              <span>Module {m.id} · {m.label}</span>
+              <span className="sidebar-icon">0{m.id + 1}</span>
+              <span>{m.label}</span>
             </button>
           ))}
         </div>
@@ -507,7 +519,7 @@ export default function BulkConsumerPortal() {
       <main className="portal-content">
         <PipelineBar activeStep={active} />
         <EnvImpactCounter />
-        <ActiveComp setActiveModule={setActive} />
+        <ActiveComp setActiveModule={setActive} onBatchCreated={setActiveBatch} activeBatch={activeBatch} />
       </main>
     </div>
   )

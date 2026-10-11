@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import PipelineBar from '../components/PipelineBar'
 import EnvImpactCounter from '../components/EnvImpactCounter'
 import { api } from '../utils/api'
+import { CITIES, getCityCoordinates } from '../utils/cities'
 
 function StatusBadge({ status }) {
   const map = {
@@ -18,9 +19,11 @@ function StatusBadge({ status }) {
 // ─── MODULE 0: Registry & Capacity ───────────────────────────────────────────
 function Module0() {
   const [collectors, setCollectors] = useState([])
+  const [selectedCity, setSelectedCity] = useState('Delhi')
   const [form, setForm] = useState({ name: '', registration_number: '', address: '', city: 'Delhi', service_radius_km: 20, weekly_capacity_kg: 500 })
   const [msg, setMsg] = useState('')
   const [loading, setLoading] = useState(true)
+  const cityCollectors = collectors.filter(c => c.city.toLowerCase() === selectedCity.toLowerCase())
 
   useEffect(() => {
     api.getAllCollectorsPortal().then(d => setCollectors(d.collectors || [])).finally(() => setLoading(false))
@@ -29,8 +32,10 @@ function Module0() {
   const handleSubmit = async e => {
     e.preventDefault()
     try {
-      const res = await api.registerCollector({ ...form, lat: 28.63, lng: 77.21, accepted_types: ['IT Equipment', 'Batteries'] })
+      const location = getCityCoordinates(form.city)
+      const res = await api.registerCollector({ ...form, ...location, accepted_types: ['IT Equipment', 'Batteries'] })
       setMsg(` Collector registered! ID: ${res.collector_id}`)
+      setSelectedCity(form.city)
       const d = await api.getAllCollectorsPortal()
       setCollectors(d.collectors || [])
     } catch (e) { setMsg(`❌ ${e.message}`) }
@@ -38,7 +43,7 @@ function Module0() {
 
   return (
     <div className="anim-fade-up">
-      <h2 className="section-title">Module 0 · Registry &amp; Capacity</h2>
+      <h2 className="section-title">Provider registration</h2>
       <p className="section-sub">Register as a PRO/Aggregator with CPCB registration. Set your service radius and weekly capacity.</p>
 
       <div className="grid-2" style={{ gap: 24 }}>
@@ -59,7 +64,7 @@ function Module0() {
             <div className="form-group">
               <label className="form-label">City</label>
               <select className="form-input form-select" value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))}>
-                {['Delhi','Mumbai','Bengaluru','Hyderabad','Pune','Chennai'].map(c => <option key={c}>{c}</option>)}
+                {CITIES.map(c => <option key={c}>{c}</option>)}
               </select>
             </div>
             <div className="grid-2">
@@ -80,9 +85,14 @@ function Module0() {
         </div>
 
         <div className="card" style={{ overflowY: 'auto', maxHeight: 520 }}>
-          <h3 style={{ fontWeight: 700, marginBottom: 16 }}>All Collectors <span className="badge badge-green">{collectors.length}</span></h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <h3 style={{ fontWeight: 700 }}>Collectors in {selectedCity} <span className="badge badge-green">{cityCollectors.length}</span></h3>
+            <select aria-label="Filter collectors by city" className="form-input form-select" style={{ maxWidth: 150 }} value={selectedCity} onChange={e => setSelectedCity(e.target.value)}>
+              {CITIES.map(city => <option key={city}>{city}</option>)}
+            </select>
+          </div>
           {loading ? <div className="loading-wrap"><div className="loader" /></div> :
-            collectors.map(c => (
+            cityCollectors.map(c => (
               <div className="entity-card" key={c.id} style={{ marginBottom: 12, flexDirection: 'column', gap: 8 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                   <div>
@@ -116,7 +126,7 @@ function Module0() {
   )
 }
 
-// ─── MODULE 1: Incoming Batch Feed (KD-Tree) ──────────────────────────────────
+// ─── MODULE 1: Incoming Batch Feed ────────────────────────────────────────────
 function Module1() {
   const [collectors, setCollectors] = useState([])
   const [colId, setColId] = useState(1)
@@ -143,9 +153,8 @@ function Module1() {
 
   return (
     <div className="anim-fade-up">
-      <h2 className="section-title">Module 1 · Incoming Batch Feed</h2>
-      <p className="section-sub">KD-Tree spatial lookup finds pending batches within your service radius, sorted by proximity.</p>
-      <div className="dsa-tag mb-4">⚙️ DSA: KD-Tree — O(log n) geographic proximity lookup of pending batches</div>
+      <h2 className="section-title">Pickup requests</h2>
+      <p className="section-sub">Review available collection requests near your service area.</p>
 
       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', marginBottom: 24 }}>
         <div className="form-group" style={{ flex: 1, maxWidth: 320, marginBottom: 0 }}>
@@ -164,7 +173,7 @@ function Module1() {
           <div className="grid-2" style={{ gap: 24 }}>
             <div>
               <h3 style={{ fontWeight: 700, marginBottom: 12 }}>Assigned Batches <span className="badge badge-green">{feed.assigned_batches?.length || 0}</span></h3>
-              {!feed.assigned_batches?.length ? <div className="empty-state"><div className="empty-state-icon">📭</div><p>No batches assigned yet</p></div> :
+              {!feed.assigned_batches?.length ? <div className="empty-state"><p>No batches assigned yet</p></div> :
                 feed.assigned_batches.map(b => (
                   <div className="card card-sm" key={b.id} style={{ marginBottom: 12 }}>
                     <div className="flex justify-between items-center">
@@ -185,7 +194,7 @@ function Module1() {
 
             <div>
               <h3 style={{ fontWeight: 700, marginBottom: 12 }}>Nearby Pending Batches <span className="badge badge-amber">{feed.nearby_pending_batches?.length || 0}</span></h3>
-              {!feed.nearby_pending_batches?.length ? <div className="empty-state"><div className="empty-state-icon">🔍</div><p>No pending batches found nearby</p></div> :
+              {!feed.nearby_pending_batches?.length ? <div className="empty-state"><p>No nearby requests are available.</p></div> :
                 feed.nearby_pending_batches.map(b => (
                   <div className="card card-sm" key={b.id} style={{ marginBottom: 12 }}>
                     <div className="flex justify-between items-center">
@@ -209,7 +218,7 @@ function Module1() {
   )
 }
 
-// ─── MODULE 2: Drive Planner (Greedy) ─────────────────────────────────────────
+// ─── MODULE 2: Drive Planner ──────────────────────────────────────────────────
 function Module2() {
   const [collectors, setCollectors] = useState([])
   const [colId, setColId] = useState(1)
@@ -227,9 +236,8 @@ function Module2() {
 
   return (
     <div className="anim-fade-up">
-      <h2 className="section-title">Module 2 · Collection Drive Planner</h2>
-      <p className="section-sub">Greedy Nearest-Neighbour algorithm orders your pickup stops to minimise total travel distance.</p>
-      <div className="dsa-tag mb-4">⚙️ DSA: Greedy Nearest-Neighbour — O(n²) route optimisation for pickup scheduling</div>
+      <h2 className="section-title">Pickup route</h2>
+      <p className="section-sub">Plan an efficient order for your assigned collection stops.</p>
 
       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', marginBottom: 24 }}>
         <div className="form-group" style={{ flex: 1, maxWidth: 320, marginBottom: 0 }}>
@@ -250,10 +258,10 @@ function Module2() {
           </div>
 
           {!plan.drive_stops?.length ? (
-            <div className="empty-state"><div className="empty-state-icon">🗺️</div><p>No assigned batches pending pickup for this collector</p></div>
+              <div className="empty-state"><p>No assigned pickups are waiting for collection.</p></div>
           ) : (
             <div className="card">
-              <h3 style={{ fontWeight: 700, marginBottom: 16 }}>Optimised Pickup Route (Greedy Nearest-Neighbour)</h3>
+              <h3 style={{ fontWeight: 700, marginBottom: 16 }}>Pickup route</h3>
               <div className="timeline">
                 {plan.drive_stops.map((s, i) => (
                   <div className="timeline-item" key={s.batch_id}>
@@ -305,7 +313,7 @@ function Module3() {
 
   return (
     <div className="anim-fade-up">
-      <h2 className="section-title">Module 3 · Handover &amp; Certificate Chain</h2>
+      <h2 className="section-title">Handover records</h2>
       <p className="section-sub">Handover batches to recyclers and view your EPR certificate trail.</p>
 
       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', marginBottom: 24 }}>
@@ -322,7 +330,7 @@ function Module3() {
         <div className="grid-2" style={{ gap: 24 }}>
           <div>
             <h3 style={{ fontWeight: 700, marginBottom: 12 }}>Collected Batches <span className="badge badge-blue">{assigned.length}</span></h3>
-            {!assigned.length ? <div className="empty-state"><div className="empty-state-icon">📭</div><p>No batches collected yet</p></div> :
+            {!assigned.length ? <div className="empty-state"><p>No batches collected yet</p></div> :
               assigned.filter(b => b.status === 'collected' || b.status === 'at_recycler').map(b => (
                 <div className="card card-sm" key={b.id} style={{ marginBottom: 12 }}>
                   <div className="flex justify-between items-center mb-4" style={{ marginBottom: 8 }}>
@@ -342,7 +350,7 @@ function Module3() {
 
           <div>
             <h3 style={{ fontWeight: 700, marginBottom: 12 }}>Certificate Chain <span className="badge badge-green">{certs.length}</span></h3>
-            {!certs.length ? <div className="empty-state"><div className="empty-state-icon">📜</div><p>No certificates yet for this collector</p></div> :
+            {!certs.length ? <div className="empty-state"><p>No certificates are available for this collector yet.</p></div> :
               certs.map(c => (
                 <div className="card card-sm" key={c.id} style={{ marginBottom: 12, borderColor: 'rgba(34,197,94,0.2)' }}>
                   <div className="mono green" style={{ marginBottom: 8 }}>{c.certificate_uid}</div>
@@ -364,10 +372,10 @@ function Module3() {
 }
 
 const COLLECTOR_MODULES = [
-  { id: 0, icon: '🏭', label: 'Registry & Capacity',       component: Module0 },
-  { id: 1, icon: '📥', label: 'Incoming Batch Feed',        component: Module1 },
-  { id: 2, icon: '🗺️', label: 'Collection Drive Planner', component: Module2 },
-  { id: 3, icon: '🔗', label: 'Handover & Cert Chain',     component: Module3 },
+  { id: 0, label: 'Provider details', component: Module0 },
+  { id: 1, label: 'Pickup requests', component: Module1 },
+  { id: 2, label: 'Route planning', component: Module2 },
+  { id: 3, label: 'Handover records', component: Module3 },
 ]
 
 export default function CollectorPortal() {
@@ -379,12 +387,12 @@ export default function CollectorPortal() {
       <aside className="portal-sidebar">
         <div>
           <div style={{ padding: '12px 12px 4px', fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-            🚛 Collector Portal
+            Collector workspace
           </div>
           {COLLECTOR_MODULES.map(m => (
             <button key={m.id} className={`sidebar-btn ${active === m.id ? 'active' : ''}`} onClick={() => setActive(m.id)}>
-              <span className="sidebar-icon">{m.icon}</span>
-              <span>Module {m.id} · {m.label}</span>
+              <span className="sidebar-icon">0{m.id + 1}</span>
+              <span>{m.label}</span>
             </button>
           ))}
         </div>

@@ -18,7 +18,7 @@ from data.sample_data import (
     COLLECTORS, BATCHES, ORGANISATIONS, RECYCLERS, CERTIFICATES,
     next_col_id, get_impact_totals
 )
-from dsa.kd_tree import KDTree
+from dsa.kd_tree import KDTree, collector_tree
 from dsa.bfs import Graph
 
 router = APIRouter()
@@ -67,6 +67,7 @@ def register_collector(col: CollectorRegister):
         "rating": 4.0,
     }
     COLLECTORS[new_id] = entry
+    collector_tree.load_from_list(list(COLLECTORS.values()))
     return {"collector_id": new_id, "message": "Collector registered successfully", "data": entry}
 
 @router.get("/{collector_id}")
