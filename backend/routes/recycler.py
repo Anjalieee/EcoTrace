@@ -19,6 +19,7 @@ from data.sample_data import (
 )
 from dsa.trie import Trie
 from dsa.bfs import Graph
+from dsa.kd_tree import recycler_tree
 
 router = APIRouter()
 
@@ -58,6 +59,7 @@ def register_recycler(rec: RecyclerRegister):
         "co2_avoided_total_kg": 0,
     }
     RECYCLERS[new_id] = entry
+    recycler_tree.load_from_list(list(RECYCLERS.values()))
     return {"recycler_id": new_id, "message": "Recycler registered successfully", "data": entry}
 
 @router.get("/{recycler_id}")
@@ -71,7 +73,10 @@ def get_recycler(recycler_id: int):
 
 @router.get("/{recycler_id}/received")
 def get_received_batches(recycler_id: int):
-    result = [b for b in BATCHES.values() if b["recycler_id"] == recycler_id]
+    result = [
+        b for b in BATCHES.values()
+        if b["recycler_id"] == recycler_id or b.get("requested_recycler_id") == recycler_id
+    ]
     for b in result:
         org = ORGANISATIONS.get(b["org_id"])
         b["org_name"] = org["name"] if org else "Unknown"

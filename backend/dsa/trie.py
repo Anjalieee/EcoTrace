@@ -77,8 +77,14 @@ device_trie = Trie()
 
 def load_device_trie(devices: dict):
     """Populate device_trie from the DEVICES sample-data dict."""
+    device_trie.root = TrieNode()
     for dev in devices.values():
         device_trie.insert(dev["name"], dev)
+
+
+def load_from_dict(devices: dict):
+    """Compatibility helper for loading device records into the shared trie."""
+    load_device_trie(devices)
 
 
 # Example usage:

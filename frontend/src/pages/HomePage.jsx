@@ -1,56 +1,40 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../utils/api'
 
 const PORTALS = [
   {
     to:    '/bulk-consumer',
-    icon:  '🏢',
     name:  'Bulk Consumer Portal',
-    color: 'rgba(34,197,94,0.15)',
-    glowColor: 'rgba(34,197,94,0.08)',
+    color: 'rgba(36,131,75,0.12)',
+    glowColor: 'rgba(36,131,75,0.06)',
     accentColor: 'var(--green-400)',
-    desc:  'For IT companies, hospitals, colleges, RWAs & co-working spaces with EPR obligation under E-Waste Rules 2022.',
-    tags:  ['Module 0 · Registry', 'Module 1 · Device Triage', 'Module 2 · Collector Match', 'Module 3 · EPR Dashboard'],
-    dsa:   'Decision Tree · Greedy · BST',
+    desc:  'Register your organisation, prepare equipment for collection, and monitor compliance progress.',
+    tags:  ['Organisation details', 'Equipment records', 'Collection', 'Compliance'],
   },
   {
     to:    '/collector',
-    icon:  '🚛',
     name:  'Collector Portal',
-    color: 'rgba(59,130,246,0.15)',
-    glowColor: 'rgba(59,130,246,0.06)',
-    accentColor: 'var(--blue-400)',
-    desc:  'For PROs, registered aggregators & formal scrap dealers with CPCB registration. Manage pickups & handover.',
-    tags:  ['Module 0 · Registry', 'Module 1 · Batch Feed', 'Module 2 · Drive Planner', 'Module 3 · Certificate Chain'],
-    dsa:   'KD-Tree · Greedy Nearest-Neighbour',
+    color: 'rgba(53,140,120,0.13)',
+    glowColor: 'rgba(53,140,120,0.06)',
+    accentColor: 'var(--teal-500)',
+    desc:  'Review nearby requests, coordinate pickups, and keep handover records up to date.',
+    tags:  ['Provider details', 'Pickup requests', 'Route planning', 'Handover'],
   },
   {
     to:    '/recycler',
-    icon:  '♻️',
     name:  'Recycler Portal',
-    color: 'rgba(192,132,252,0.15)',
-    glowColor: 'rgba(192,132,252,0.06)',
-    accentColor: 'var(--purple-400)',
-    desc:  'For CPCB-certified recyclers — Attero, Ecoreco, Karo Sambhav & others. Issue EPR certificates & track impact.',
-    tags:  ['Module 0 · Registry', 'Module 1 · Batch Incoming', 'Module 2 · Network View', 'Module 3 · Certificate Issuance'],
-    dsa:   'Trie · Greedy Assignment',
+    color: 'rgba(107,132,75,0.14)',
+    glowColor: 'rgba(107,132,75,0.06)',
+    accentColor: 'var(--green-400)',
+    desc:  'Manage deliveries, record recycling activity, and issue certificates for processed batches.',
+    tags:  ['Facility details', 'Incoming batches', 'Network overview', 'Certificates'],
   },
 ]
 
-const DSA_CONCEPTS = [
-  { name: 'Binary Search Tree',   use: 'EPR credit range queries on sorted certificate values' },
-  { name: 'KD-Tree',              use: 'Geographic spatial lookup of nearest collectors / batches' },
-  { name: 'Trie',                 use: 'O(m) prefix search on certificate UIDs'                },
-  { name: 'Greedy Algorithm',     use: 'Batch-to-collector assignment & drive route planning'    },
-  { name: 'Decision Tree',        use: 'Device triage classification (refurbishable / hazardous)' },
-  { name: 'Graph (Network)',      use: 'Collector → Recycler edge mapping for network view'      },
-]
-
-function StatCard({ val, label, icon }) {
+function StatCard({ val, label }) {
   return (
     <div className="card stat-card anim-fade-up">
-      <div style={{ fontSize: '2rem', marginBottom: 8 }}>{icon}</div>
       <div className="stat-value">{val}</div>
       <div className="stat-label">{label}</div>
     </div>
@@ -77,11 +61,11 @@ export default function HomePage() {
     <div>
       {/* ── Hero ────────────────────────────────────────── */}
       <section className="hero">
-        <div className="hero-chip">🌿 India's E-Waste Rules 2022 Compliant</div>
+        <div className="hero-chip">E-waste lifecycle tracking</div>
         <h1 className="hero-title">EcoTrace</h1>
         <p className="hero-sub">
-          End-to-end e-waste lifecycle management — from bulk collection &amp; EPR compliance
-          to CPCB-certified recycling &amp; impact tracking. Three portals. One platform.
+          Coordinate collection, recycling, and compliance in one place, with clear progress
+          from equipment registration through final certification.
         </p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
           <button className="btn btn-primary btn-lg" onClick={() => navigate('/bulk-consumer')}>
@@ -92,43 +76,38 @@ export default function HomePage() {
           </button>
         </div>
 
-        {/* Floating glow blobs */}
-        <div style={{ position: 'absolute', top: '20%', left: '10%', width: 300, height: 300,
-          background: 'radial-gradient(circle, rgba(34,197,94,0.08) 0%, transparent 70%)', borderRadius: '50%', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: '10%', right: '8%', width: 250, height: 250,
-          background: 'radial-gradient(circle, rgba(20,184,166,0.07) 0%, transparent 70%)', borderRadius: '50%', pointerEvents: 'none' }} />
       </section>
 
       {/* ── Global Stats ─────────────────────────────────── */}
       <section style={{ padding: '0 24px 60px' }}>
         <div className="container">
           <div className="grid-4">
-            <StatCard val={`${s.total_weight_kg.toLocaleString()} kg`} label="E-waste processed"      icon="⚖️" />
-            <StatCard val={`${s.co2_avoided_kg.toLocaleString()} kg`}  label="CO₂ avoided"            icon="🌿" />
-            <StatCard val={s.certificates_issued}                        label="EPR certificates issued" icon="📜" />
-            <StatCard val={s.orgs_registered}                            label="Orgs registered"        icon="🏢" />
+            <StatCard val={`${s.total_weight_kg.toLocaleString()} kg`} label="E-waste processed" />
+            <StatCard val={`${s.co2_avoided_kg.toLocaleString()} kg`} label="CO₂ avoided" />
+            <StatCard val={s.certificates_issued} label="EPR certificates issued" />
+            <StatCard val={s.orgs_registered} label="Organisations registered" />
           </div>
         </div>
       </section>
 
-      {/* ── 4-module Pipeline Explainer ──────────────────── */}
+      {/* ── How it works ──────────────────── */}
       <section style={{ background: 'var(--bg-surface)', padding: '60px 24px', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
         <div className="container">
           <div className="text-center mb-4">
-            <h2 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: 8 }}>The 4-Module Pipeline</h2>
-            <p className="muted">Every batch travels through all 4 stages. Progress unlocks with each confirmation.</p>
+            <h2 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: 8 }}>From collection to recovery</h2>
+            <p className="muted">Follow each batch through a transparent recycling journey.</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, flexWrap: 'wrap', marginTop: 32 }}>
             {[
-              { step: 0, icon: '📋', title: 'Registry & Visibility',    desc: 'Organisation registers, devices catalogued' },
-              { step: 1, icon: '🔬', title: 'Device Triage Engine',     desc: 'Classify devices — refurb / recycle / hazardous' },
-              { step: 2, icon: '🤝', title: 'Collector Matching',       desc: 'Greedy algorithm matches nearest PRO' },
-              { step: 3, icon: '📜', title: 'EPR Compliance',           desc: 'Certificate issued, CO₂ & metals tracked' },
+              { step: 0, title: 'Register', desc: 'Add your organisation and equipment' },
+              { step: 1, title: 'Prepare', desc: 'Review items and create a collection batch' },
+              { step: 2, title: 'Collect', desc: 'Coordinate pickup and facility handover' },
+              { step: 3, title: 'Track impact', desc: 'Review recycling records and certificates' },
             ].map((p, i) => (
               <React.Fragment key={p.step}>
                 <div style={{ textAlign: 'center', maxWidth: 180, padding: '16px 12px' }}>
-                  <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>{p.icon}</div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--green-400)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Module {p.step}</div>
+                  <div className="journey-step-number">0{p.step + 1}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--green-400)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Step {p.step + 1}</div>
                   <div style={{ fontWeight: 700, marginBottom: 6, fontSize: '0.9rem' }}>{p.title}</div>
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{p.desc}</div>
                 </div>
@@ -144,48 +123,26 @@ export default function HomePage() {
         <div className="container">
           <div className="text-center mb-4" style={{ marginBottom: 40 }}>
             <h2 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: 8 }}>Choose Your Portal</h2>
-            <p className="muted">Three role-based portals — each with a full 4-module workflow.</p>
+            <p className="muted">Choose the workspace that fits your role.</p>
           </div>
           <div className="portal-cards">
             {PORTALS.map(p => (
-              <div
+              <Link
                 key={p.to}
                 className="portal-card anim-fade-up"
                 style={{ '--glow-color': p.glowColor }}
-                onClick={() => navigate(p.to)}
+                to={p.to}
               >
-                <div className="portal-card-icon">{p.icon}</div>
+                <div className="portal-card-index" aria-hidden="true">{p.name.slice(0, 1)}</div>
                 <div className="portal-card-name" style={{ color: p.accentColor }}>{p.name}</div>
                 <div className="portal-card-desc">{p.desc}</div>
                 <div className="portal-card-tags">
                   {p.tags.map(t => <span key={t} className="portal-card-tag">{t}</span>)}
                 </div>
-                <div className="dsa-tag" style={{ marginBottom: 16 }}>⚙️ {p.dsa}</div>
-                <button className="btn btn-primary w-full">
-                  Enter Portal →
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── DSA Map ──────────────────────────────────────── */}
-      <section style={{ background: 'var(--bg-surface)', padding: '60px 24px', borderTop: '1px solid var(--border)' }}>
-        <div className="container">
-          <div className="text-center" style={{ marginBottom: 36 }}>
-            <h2 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: 8 }}>DSA Map — All Load-Bearing</h2>
-            <p className="muted">Every algorithm directly powers a feature in the product.</p>
-          </div>
-          <div className="grid-2" style={{ maxWidth: 800, margin: '0 auto' }}>
-            {DSA_CONCEPTS.map(d => (
-              <div key={d.name} className="card card-sm flex gap-4 items-center">
-                <div className="dsa-tag" style={{ flexShrink: 0 }}>⚙️</div>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: 2 }}>{d.name}</div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{d.use}</div>
-                </div>
-              </div>
+                <span className="btn btn-primary w-full">
+                  Open workspace <span aria-hidden="true">→</span>
+                </span>
+              </Link>
             ))}
           </div>
         </div>
@@ -193,7 +150,7 @@ export default function HomePage() {
 
       {/* ── Footer ───────────────────────────────────────── */}
       <footer style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '0.8rem', borderTop: '1px solid var(--border)' }}>
-        EcoTrace v2.0 · E-Waste Rules 2022 · Built for India's 598 CPCB-certified recyclers
+        EcoTrace · E-waste collection and recycling management
       </footer>
     </div>
   )

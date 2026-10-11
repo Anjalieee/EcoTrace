@@ -1,4 +1,4 @@
-const API_BASE = '/api'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
 
 async function request(method, path, body = null) {
   try {
@@ -37,6 +37,9 @@ export const api = {
   getBatch:          (id)       => request('GET',  `/bulk-consumer/batch/${id}`),
   getOrgBatches:     (orgId)    => request('GET',  `/bulk-consumer/org/${orgId}/batches`),
   matchCollectors:   (orgId)    => request('GET',  `/bulk-consumer/match-collectors/${orgId}`),
+  getNearbyCollectors: (params) => request('GET', `/bulk-consumer/nearby-collectors?${new URLSearchParams(params)}`),
+  getNearbyRecyclers:  (params) => request('GET', `/bulk-consumer/nearby-recyclers?${new URLSearchParams(params)}`),
+  requestPickup: (batchId, providerType, providerId) => request('POST', `/bulk-consumer/batch/${batchId}/pickup-request`, { provider_type: providerType, provider_id: providerId }),
   getEprDashboard:   (orgId)    => request('GET',  `/bulk-consumer/epr-dashboard/${orgId}`),
 
   // ── Collector ──────────────────────────────────

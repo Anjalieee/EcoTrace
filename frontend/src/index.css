@@ -5,32 +5,32 @@
    Tip: add <meta name="viewport" content="width=device-width, initial-scale=1">
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
 
 /* ── CSS Custom Properties ─────────────────────────────────── */
 :root {
-  --bg-base:       #f6f8f7;
+  --bg-base:       #f4f8f4;
   --bg-surface:    #ffffff;
   --bg-card:       #ffffff;
-  --bg-card-hover: #f1f5f4;
-  --border:        rgba(15,23,42,0.10);
-  --border-bright: rgba(15,23,42,0.20);
+  --bg-card-hover: #edf5ee;
+  --border:        rgba(25,63,39,0.11);
+  --border-bright: rgba(25,63,39,0.22);
 
   /* Greens are darkened so text/icons stay readable on light backgrounds */
-  --green-500:  #16a34a;
-  --green-400:  #15803d;
-  --green-300:  #22c55e;
-  --green-glow: rgba(22,163,74,0.12);
-  --teal-500:   #0d9488;
+  --green-500:  #24834b;
+  --green-400:  #176b3a;
+  --green-300:  #56a96f;
+  --green-glow: rgba(36,131,75,0.11);
+  --teal-500:   #358c78;
   --blue-500:   #2563eb;
   --blue-400:   #1d4ed8;
   --amber-400:  #b45309;
   --rose-500:   #e11d48;
-  --purple-400: #7e22ce;
+  --purple-400: #547b4b;
 
-  --text-primary:   #0f172a;
-  --text-secondary: #475569;
-  --text-muted:     #94a3b8;
+  --text-primary:   #17251b;
+  --text-secondary: #526458;
+  --text-muted:     #829187;
 
   --radius-sm:  4px;
   --radius-md:  8px;
@@ -40,7 +40,7 @@
   --shadow-sm:  0 1px 2px rgba(15,23,42,0.06);
   --shadow-md:  0 1px 3px rgba(15,23,42,0.08), 0 4px 12px rgba(15,23,42,0.04);
   --shadow-lg:  0 4px 6px rgba(15,23,42,0.05), 0 12px 28px rgba(15,23,42,0.10);
-  --shadow-green: 0 2px 10px rgba(22,163,74,0.25);
+  --shadow-green: 0 2px 10px rgba(36,131,75,0.17);
 
   --navbar-h: 64px;
 }
@@ -49,7 +49,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 body {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'DM Sans', sans-serif;
   background: var(--bg-base);
   color: var(--text-primary);
   line-height: 1.6;
@@ -57,6 +57,7 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
+h1, h2, h3, h4, .navbar-title, .role-title { font-family: 'Manrope', 'DM Sans', sans-serif; }
 img, svg, video, canvas { max-width: 100%; height: auto; }
 a { color: inherit; text-decoration: none; }
 button { cursor: pointer; border: none; outline: none; font-family: inherit; }
@@ -72,6 +73,7 @@ ul { list-style: none; }
 
 /* ── Layout ─────────────────────────────────────────────────── */
 .page-wrapper    { min-height: 100vh; background: var(--bg-base); }
+.route-transition { animation: routeEnter 0.24s ease-out both; }
 .container       { width: 100%; max-width: 1280px; margin: 0 auto; padding: 0 24px; }
 .flex            { display: flex; }
 .flex-col        { display: flex; flex-direction: column; }
@@ -196,12 +198,12 @@ select option:checked {
 .badge-blue   { background: rgba(37,99,235,0.12);  color: #1d4ed8; }
 .badge-amber  { background: rgba(217,119,6,0.14);  color: #b45309; }
 .badge-red    { background: rgba(225,29,72,0.12);  color: #be123c; }
-.badge-purple { background: rgba(126,34,206,0.12); color: #7e22ce; }
+.badge-purple { background: rgba(84,123,75,0.12); color: #456a3e; }
 .badge-teal   { background: rgba(13,148,136,0.12); color: #0f766e; }
 
 /* ── Stat Card ──────────────────────────────────────────────── */
 .stat-card { text-align: center; }
-.stat-value { font-size: clamp(1.5rem, 4vw, 2rem); font-weight: 800; line-height: 1.1; background: linear-gradient(135deg, var(--green-400), var(--teal-500)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.stat-value { font-size: clamp(1.5rem, 4vw, 2rem); font-weight: 800; line-height: 1.1; color: var(--green-400); }
 .stat-label { font-size: 0.78rem; color: var(--text-secondary); margin-top: 4px; font-weight: 500; }
 
 /* ── Table ──────────────────────────────────────────────────── */
@@ -277,7 +279,8 @@ tr:hover td { background: rgba(22,163,74,0.04); }
 .pipeline-step.done    { color: var(--green-400); }
 .pipeline-step.active  { color: #fff; background: var(--green-500); }
 .pipeline-step.pending { color: var(--text-muted); }
-.pipeline-step-icon { font-size: 1rem; }
+.pipeline-step-icon { display: inline-grid; place-items: center; width: 24px; height: 24px; border: 1px solid currentColor; border-radius: 50%; font-size: 0.72rem; }
+.workflow-check { font-size: 0.75rem; }
 .pipeline-connector { width: 24px; height: 2px; background: var(--border-bright); flex-shrink: 0; }
 .pipeline-connector.done { background: var(--green-500); }
 @media (max-width: 480px) {
@@ -295,7 +298,7 @@ tr:hover td { background: rgba(22,163,74,0.04); }
   margin-bottom: 24px;
 }
 .impact-item { display: flex; align-items: center; gap: 8px; }
-.impact-icon { font-size: 1.4rem; }
+.impact-icon { display: inline-grid; place-items: center; width: 28px; height: 28px; flex: 0 0 28px; border-radius: 50%; color: var(--green-400); background: var(--green-glow); font: 700 0.58rem 'JetBrains Mono', monospace; }
 .impact-val  { font-size: 1.1rem; font-weight: 800; color: var(--green-400); }
 .impact-lab  { font-size: 0.72rem; color: var(--text-secondary); }
 @media (max-width: 640px) {
@@ -321,7 +324,7 @@ tr:hover td { background: rgba(22,163,74,0.04); }
 }
 .sidebar-btn:hover  { background: rgba(15,23,42,0.05); color: var(--text-primary); }
 .sidebar-btn.active { background: var(--green-glow); color: var(--green-400); font-weight: 600; }
-.sidebar-icon { font-size: 1.1rem; flex-shrink: 0; }
+.sidebar-icon { display: inline-grid; place-items: center; width: 24px; flex-shrink: 0; color: var(--text-muted); font: 600 0.65rem 'JetBrains Mono', monospace; }
 .portal-content { flex: 1; min-width: 0; padding: 32px; overflow-y: auto; }
 
 @media (max-width: 1024px) {
@@ -350,13 +353,6 @@ tr:hover td { background: rgba(22,163,74,0.04); }
 .divider { height: 1px; background: var(--border); margin: 24px 0; }
 
 /* ── DSA Badge ──────────────────────────────────────────────── */
-.dsa-tag {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: rgba(126,34,206,0.08); border: 1px solid rgba(126,34,206,0.2);
-  color: var(--purple-400); font-size: 0.75rem; font-weight: 600;
-  padding: 4px 12px; border-radius: 99px; font-family: 'JetBrains Mono', monospace;
-  max-width: 100%; overflow-wrap: anywhere;
-}
 
 /* ── Green Ring Compliance ──────────────────────────────────── */
 .compliance-ring { display: flex; flex-direction: column; align-items: center; gap: 8px; }
@@ -370,14 +366,12 @@ tr:hover td { background: rgba(22,163,74,0.04); }
   position: relative; overflow: hidden;
   padding: 100px 24px 80px;
   text-align: center;
-  background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(22,163,74,0.14), transparent),
-              radial-gradient(ellipse 60% 40% at 80% 80%, rgba(13,148,136,0.10), transparent),
-              var(--bg-base);
+  background: #edf5ee;
+  border-bottom: 1px solid var(--border);
 }
 .hero-title {
   font-size: clamp(2rem, 6vw, 5rem); font-weight: 800; line-height: 1.08;
-  background: linear-gradient(135deg, #0f172a 30%, var(--green-400) 75%, var(--teal-500));
-  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  color: var(--green-400);
   margin-bottom: 20px;
   overflow-wrap: break-word;
 }
@@ -387,6 +381,13 @@ tr:hover td { background: rgba(22,163,74,0.04); }
   color: var(--green-400); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em;
   padding: 5px 14px; border-radius: 99px; text-transform: uppercase; margin-bottom: 28px;
 }
+.journey-step-number, .portal-card-index {
+  display: grid; place-items: center; width: 48px; height: 48px;
+  margin: 0 auto 16px; border: 1px solid rgba(36,131,75,0.22);
+  border-radius: 50%; color: var(--green-400); background: rgba(36,131,75,0.07);
+  font: 700 0.9rem 'Manrope', sans-serif;
+}
+.portal-card-index { margin: 0 0 16px; font-size: 1.2rem; }
 @media (max-width: 768px) {
   .hero { padding: 72px 20px 56px; }
   .hero-sub { margin-bottom: 28px; }
@@ -412,7 +413,6 @@ tr:hover td { background: rgba(22,163,74,0.04); }
 }
 .portal-card:hover { transform: translateY(-6px); border-color: var(--border-bright); box-shadow: var(--shadow-lg); }
 .portal-card:hover::before { opacity: 1; }
-.portal-card-icon { font-size: 2.4rem; margin-bottom: 16px; }
 .portal-card-name { font-size: 1.15rem; font-weight: 800; margin-bottom: 6px; }
 .portal-card-desc { font-size: 0.82rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 20px; }
 .portal-card-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
@@ -427,6 +427,7 @@ tr:hover td { background: rgba(22,163,74,0.04); }
 /* ── Animations ─────────────────────────────────────────────── */
 @keyframes fadeUp   { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fadeIn   { from { opacity: 0; } to { opacity: 1; } }
+@keyframes routeEnter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes pulse    { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 @keyframes spin     { to { transform: rotate(360deg); } }
 @keyframes countUp  { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
@@ -508,3 +509,41 @@ tr:hover td { background: rgba(22,163,74,0.04); }
 .w-full { width: 100%; }
 .text-right { text-align: right; }
 .text-center { text-align: center; }
+
+.role-page {
+  min-height: 100vh; padding: 64px 24px 32px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; color: var(--text-primary);
+  background: radial-gradient(ellipse at 50% 0%, rgba(82,145,94,0.12), transparent 42%), var(--bg-base);
+}
+.role-header { max-width: 620px; text-align: center; margin-bottom: 40px; }
+.role-brand-mark {
+  width: 48px; height: 48px; margin: 0 auto 18px; display: grid; place-items: center;
+  border-radius: 12px; color: white; background: var(--green-400);
+  font: 800 0.95rem 'Manrope', sans-serif; box-shadow: var(--shadow-green);
+}
+.role-eyebrow { color: var(--green-400); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
+.role-header h1 { margin: 4px 0 10px; font-size: 2.5rem; line-height: 1.15; }
+.role-intro { color: var(--text-secondary); line-height: 1.65; }
+.role-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; width: min(100%, 1020px); }
+.role-card {
+  display: flex; flex-direction: column; align-items: flex-start; min-height: 292px; position: relative;
+  padding: 26px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-surface);
+  box-shadow: var(--shadow-sm); color: inherit; text-align: left; white-space: normal;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+.role-card:hover { border-color: rgba(36,131,75,0.42); box-shadow: var(--shadow-lg); transform: translateY(-3px); }
+.role-card:focus-visible { outline: 2px solid var(--green-500); outline-offset: 3px; }
+.role-index { position: absolute; top: 22px; right: 24px; color: #a7b3aa; font: 600 0.75rem 'JetBrains Mono', monospace; }
+.role-badge { margin-bottom: 24px; padding: 5px 9px; border-radius: 4px; color: var(--green-400); background: var(--green-glow); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.role-title { font-size: 1.2rem; font-weight: 800; }
+.role-subtitle { margin-top: 3px; color: var(--text-secondary); font-size: 0.8rem; }
+.role-description { margin: 16px 0 24px; color: var(--text-secondary); font-size: 0.86rem; line-height: 1.6; }
+.role-action { display: flex; justify-content: space-between; width: 100%; margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border); color: var(--green-400); font-size: 0.85rem; font-weight: 700; }
+.role-action span { transition: transform 0.18s ease; }
+.role-card:hover .role-action span { transform: translateX(4px); }
+.role-footer { margin-top: 32px; color: var(--text-muted); font-size: 0.78rem; text-align: center; }
+@media (max-width: 780px) {
+  .role-page { padding: 48px 20px 24px; }
+  .role-grid { grid-template-columns: minmax(0, 1fr); max-width: 480px; }
+  .role-card { min-height: 0; }
+}
